@@ -16,9 +16,7 @@
     ※セーブデータは直接ファイルとして保存されません。上記のテキストエリアに表示されたデータをコピーして、テキストファイルに貼り付けて保存してください。<br>
     ロードする際は、保存したデータを上記のテキストエリアに貼り付けてから「ロード」ボタンを押してください。
   </p>
-</div>
-
-<details>
+</div><details>
   <summary>Ver.4.6.6リリースノート</summary><p>
     <div style="margin-top: 1em; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
 重要！　更新以前からプレイしていた人は一度手動でセーブ、ロードしてください！</br>
@@ -51,8 +49,7 @@
     <input type="checkbox" id="keepOptionSelected">
     <label for="keepOptionSelected">オプションを先頭に戻さない</label>
 </div>
-<button onclick="nextTurn()">▶ ターンを進める</button>
-<br>
+<button onclick="nextTurn()">▶ ターンを進める</button><br>
 <select id="actionSelect" onchange="updateConfirmButton()">
   <option value="">計画一覧</option>
   <option value="buildFarm" data-myisland="true">農場建設 (100G)</option>
@@ -142,8 +139,3 @@
 </div>
 <div id="log" style="margin-top:1em;"></div>
 <script src="script.js"></script></body></html>
-
-
-
-
-
