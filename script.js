@@ -1,4 +1,4 @@
-let monster = null;
+  let monster = null;
 const MONSTER_TYPES = {
   1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 60000 },
   2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 120000 },
@@ -286,6 +286,18 @@ document.getElementById('islandNameInput').value = islandName; // UIに初期値
 }
 
 function updateStatus() {
+let totalFarm = 0;
+  let totalFactory = 0;
+  if (map && map.length > 0) {
+      map.forEach(row => row.forEach(tile => {
+          if (tile.facility === 'farm') totalFarm += (tile.scale || 0);
+          if (tile.facility === 'factory') totalFactory += (tile.scale || 0);
+      }));
+  }
+  const farmEl = document.getElementById('totalFarmScale');
+  if(farmEl) farmEl.textContent = totalFarm;
+  const factoryEl = document.getElementById('totalFactoryScale');
+  if(factoryEl) factoryEl.textContent = totalFactory;
 const moneyElement = document.getElementById('money');
   if (economicCrisisTurns > 0) {
       moneyElement.innerHTML = `${money} <span style="color: red;">(使用不可${frozenMoney})</span>`;
@@ -487,6 +499,9 @@ function showTileInfo(x, y) {
         if (tile.facility === 'oilRig') facilityName = '高効率海底油田';
     }
     info += ` / 建物: ${facilityName}`;
+    if (tile.facility === 'farm' || tile.facility === 'factory') {
+        info += ` (規模: ${tile.scale || 0})`;
+    }
     if (tile.facility === 'house' && !isViewingOtherIsland) info += ` (人口: ${tile.pop})`; // 他の島では人口表示なし
       if (tile.facility === 'Monument' && !isViewingOtherIsland) {
          info += ` (Lv: ${tile.MonumentLevel})`;
@@ -667,6 +682,16 @@ function loadGame() {
             if (tile.MonumentLevel === undefined) {
                 tile.MonumentLevel = 0;
             }
+    if ((tile.facility === 'farm' || tile.facility === 'factory') && tile.scale === undefined) {
+        // 初期値と上限の設定
+        if (tile.facility === 'farm') {
+            tile.scale = 10000;
+            tile.maxScale = tile.enhanced ? 75000 : 50000; // 強化済みなら上限+25000として扱う
+        } else if (tile.facility === 'factory') {
+            tile.scale = 30000;
+            tile.maxScale = tile.enhanced ? 150000 : 100000; // 強化済みなら上限+50000として扱う
+        }
+    }
         }));
         // isDispatchedプロパティがない場合の初期化
         warships.forEach(ship => {
@@ -1889,23 +1914,60 @@ const newWarship = {
     };
     if (action === 'delayAction') {
     }
+    // --- 農場建設ロジックの変更 ---
     else if (action === 'buildFarm') {
-      if (tile && tile.terrain === 'plain' && money >= 100) {
+      // 既に農場がある場合の規模拡大
+      if (tile && tile.facility === 'farm') {
+          if (money >= 100) {
+              if (tile.scale < tile.maxScale) {
+                  money -= 100;
+                  tile.scale = Math.min(tile.scale + 2000, tile.maxScale);
+                  logAction(`(${x},${y}) の農場規模を拡張しました (現在の規模: ${tile.scale})`);
+              } else {
+                  logAction(`(${x},${y}) の農場は既に最大規模です`);
+              }
+          } else {
+               logAction(`(${x},${y}) の農場拡張に失敗しました（資金不足）`);
+          }
+      }
+      // 新規建設
+      else if (tile && tile.terrain === 'plain' && money >= 100) {
         handleHouseOverwrite(tile);
         tile.facility = 'farm';
-        tile.enhanced = false; // 新規建設は強化なし
+        tile.enhanced = false; 
+        tile.scale = 10000; // 初期規模
+        tile.maxScale = 50000; // 初期上限
         money -= 100;
-        logAction(`(${x},${y}) に農場を建設しました`);
+        logAction(`(${x},${y}) に農場を建設しました (規模: 10000)`);
         checkAndCompleteMission('02', 1, 0, 250,() => map.flat().some(t => t.facility === 'farm'),'農場が1つでも建設されている');
       } else logAction(`(${x},${y}) の農場建設は失敗しました（条件不適合または資金不足）`);
     }
+
+    // --- 工場建設ロジックの変更 ---
     else if (action === 'buildFactory') {
-      if (tile && tile.terrain === 'plain' && money >= 100) {
+      // 既に工場がある場合の規模拡大
+      if (tile && tile.facility === 'factory') {
+          if (money >= 100) {
+              if (tile.scale < tile.maxScale) {
+                  money -= 100;
+                  tile.scale = Math.min(tile.scale + 10000, tile.maxScale);
+                  logAction(`(${x},${y}) の工場規模を拡張しました (現在の規模: ${tile.scale})`);
+              } else {
+                  logAction(`(${x},${y}) の工場は既に最大規模です`);
+              }
+          } else {
+               logAction(`(${x},${y}) の工場拡張に失敗しました（資金不足）`);
+          }
+      }
+      // 新規建設
+      else if (tile && tile.terrain === 'plain' && money >= 100) {
         handleHouseOverwrite(tile);
         tile.facility = 'factory';
-        tile.enhanced = false; // 新規建設は強化なし
+        tile.enhanced = false;
+        tile.scale = 30000; // 初期規模
+        tile.maxScale = 100000; // 初期上限
         money -= 100;
-        logAction(`(${x},${y}) に工場を建設しました`);
+        logAction(`(${x},${y}) に工場を建設しました (規模: 30000)`);
         checkAndCompleteMission('03', 1, 0, 500,() => map.flat().some(t => t.facility === 'factory'),'工場が1つでも建設されている');
       } else logAction(`(${x},${y}) の工場建設は失敗しました（条件不適合または資金不足）`);
     }
@@ -2269,10 +2331,9 @@ const newWarship = {
         }
     }
     else if (action === 'enhanceFacility') { // 設備強化
-        if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig') && !tile.enhanced && money >= 10000) {
+        if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig') && !tile.enhanced && money >= 500000) {
 tile.enhanced = true;
-        money -= 10000;
-        
+        money -= 500000;
         let facilityName;
         if (tile.facility === 'farm') facilityName = '農場';
         else if (tile.facility === 'factory') facilityName = '工場';
@@ -2406,47 +2467,77 @@ let hiyou = (durability * 10000000) + (mainGun * 12000000) + (torpedo * 10000000
   }
 
   // 生産＆成長処理
+let totalFarmScale = 0;
+  let totalFactoryScale = 0;
+  
+  // 1. まず全タイルの情報を走査して、規模の合計と人口成長を処理
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const tile = map[y][x];
-      if (tile.facility === 'farm' && tile.terrain === 'plain') {
-          if (volcanoTurns === 0) { // 噴火中は産出なし
-              foodChange += tile.enhanced ? 300 : 100; // 強化農場は食料300
-          }
+      
+      // 農場・工場の規模集計
+      if (tile.facility === 'farm') {
+          totalFarmScale += (tile.scale || 0);
       }
+      if (tile.facility === 'factory') {
+          totalFactoryScale += (tile.scale || 0);
+      }
+
+      // 住宅の人口増加処理
       if (tile.facility === 'house') {
         const growth = Math.floor(Math.random() * 151 + 50);
-        const added = Math.min(7500 - tile.pop, growth);
-        if (volcanoTurns === 0) { // 追加
+        // 上限を 7500 から 10000 に変更
+        const added = Math.min(10000 - tile.pop, growth);
+        if (volcanoTurns === 0) {
             tile.pop += added;
             currentTurnPopulationGrowth += added;
         }
       }
-      if (tile.facility === 'factory') {
-          // 変更箇所：経済危機の影響を反映
-          let divisor;
-          if (economicCrisisTurns > 0) {
-              // 経済危機中
-              if (tile.enhanced) {
-                  // 強化工場 (通常1.5倍) の生産が 0.2倍 になる
-                  // 元の生産額: pop / (4 / 1.5)
-                  // この 0.2倍: (pop / (4 / 1.5)) * 0.2 = pop / ((4 / 1.5) / 0.2) = pop / (4 / (1.5 * 0.2)) = pop / (4 / 0.3)
-                  divisor = 4 / 0.3; 
-              } else {
-                  // 通常工場 (通常1.0倍) の生産が 0.5倍 になる
-                  // 元の生産額: pop / 4
-                  // この 0.5倍: (pop / 4) * 0.5 = pop / (4 / 0.5)
-                  divisor = 4 / 0.5;
-              }
-          } else {
-              // 経済危機ではない
-              divisor = tile.enhanced ? (4 / 1.5) : 4;
-          }
-          moneyChange += Math.floor(population / divisor);
-      }
     }
   }
 
+  // 人口の確定（このターンの増加分を加算）
+  population += currentTurnPopulationGrowth;
+
+  // 2. 就労計算と生産処理
+  
+  // 労働可能総人口
+  let availableWorkers = population;
+  
+  // A. 農場への就職 (優先)
+  // 農場就労人数 = min(人口, 全農場規模)
+  let farmWorkers = Math.min(availableWorkers, totalFarmScale);
+  availableWorkers -= farmWorkers; // 残り人口
+  
+  // B. 工場への就職
+  // 工場就労人数 = min(残り人口, 全工場規模)
+  let factoryWorkers = Math.min(availableWorkers, totalFactoryScale);
+  
+  // C. 生産量の計算
+  // 農場生産: 100人あたり500食料
+  let farmProduction = Math.floor((farmWorkers / 100) * 500);
+  if (volcanoTurns > 0) farmProduction = 0; // 噴火中は0
+
+  // 工場生産: 100人あたり100G (つまり人数分)
+  let factoryProduction = Math.floor((factoryWorkers / 100) * 100);
+  
+  // 経済危機時の補正 (既存ロジックの適用)
+  if (economicCrisisTurns > 0) {
+      // 経済危機時は生産額激減 (例: 1/4にする)
+      factoryProduction = Math.floor(factoryProduction * 0.25);
+  }
+
+  foodChange += farmProduction;
+  moneyChange += factoryProduction;
+
+  // 3. 食料消費の計算
+  // 人口500人あたり100食料消費 (= 人口 / 5)
+  let foodConsumption = Math.floor(population / 5);
+  foodChange -= foodConsumption;
+
+  // UI更新用に規模合計を保持（updateStatusで使用するためグローバル変数かHTMLへ直接反映）
+  document.getElementById('totalFarmScale').textContent = totalFarmScale;
+  document.getElementById('totalFactoryScale').textContent = totalFactoryScale;
 if (turn > 0 && turn % 50 === 0) {
     const monumentLevel = getMonumentLevel(); // A. で追加した関数を呼び出す
     if (monumentLevel > 0) {
@@ -3259,7 +3350,6 @@ window.loadGame = function() {
         console.error(e);
     }
 }
-
 // 初期化時に自分の島の状態をロード（または初期化）する　
 window.onload = function() {
     loadMyIslandState(); // まず自分の島をロード/初期化
