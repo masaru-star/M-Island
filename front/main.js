@@ -1,5 +1,5 @@
-import { monster,SIZE,money,food,population,turn,achievementPoints,tutorialMissions,map,selectedX,selectedY,actionQueue,islandName,warships } from "js/state.js";
-import { setMoney,changeMoney } from "js/state.js";
+import { monster,SIZE,money,food,population,turn,achievementPoints,tutorialMissions,map,actionQueue,islandName,warships } from "js/state.js";
+import { setMoney,changeMoney,setFood,changeFood,setPop,setName,setTurn,setMonster } from "js/state.js";
 import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
 import { renderActionQueue,getActionName } from "js/actionQueue.js";
@@ -624,12 +624,12 @@ function loadMyIslandState() {
 
 // ゲームを初期設定に戻す関数
 function resetGame() {
-    money = 2500;
-    food = 1000;
-    population = 0;
-    turn = 0;
-    islandName = "MyIsland";
-    monster = null;
+    setMoney(2500);
+    setFood(1000);
+    setPop(0);
+    setTurn(0);
+    setName("MyIsland");
+    setMonster(null);
     monsters = [];
     actionQueue = [];
     warships = []; // 軍艦データをリセット
