@@ -4,25 +4,6 @@ import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
 import { renderActionQueue,getActionName } from "js/actionQueue.js";
 
-const MONSTER_TYPES = {
-  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 60000 },
-  2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 120000 },
-  3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', condition: (pop) => pop >= 120000 },
-  4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', condition: (pop) => pop >= 150000 },
-  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', condition: (pop) => pop >= 150000 }
-};
-  let economicCrisisTurns = 0; // 経済危機の残りターン数
-  let frozenMoney = 0; // 経済危機による凍結資金
-  let volcanoTurns = 0; // 火山の噴火 残りターン数
-
-  // 軍艦の色変化条件
-  const WARSHIP_CAPS = {
-      maxDurability: 30,
-      mainGun: 15,
-      antiAir: 35,
-      maxFuel: 1000,
-      maxAmmo: 1200
-  };
 /**
  * 軍艦がダメージを受けた際に、火災または弾薬庫の発火を判定する
  * @param {object} warship ダメージを受けた軍艦オブジェクト
@@ -119,8 +100,6 @@ function checkAndCompleteMission(missionId, pt, foodReward, moneyReward, checkFu
       if (cappedCount === 10) return 'warship-sp';
       return ''; // 上限到達が2つ未満の場合は色を付けない
   }
-let myIslandState = null; // 自分の島の状態を保存する変数
-let isViewingOtherIsland = false; // 他の島を見ているかどうかのフラグ
 
 function randTerrain() {
   const r = Math.random();
