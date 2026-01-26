@@ -1,8 +1,9 @@
+import { monster,SIZE,money,food,population,turn,achievementPoints,tutorialMissions,map,actionQueue,islandName,warships } from "js/state.js";
+import { setMoney,changeMoney,setFood,changeFood,setPop,setName,setTurn,setMonster } from "js/state.js";
 import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
 import { renderActionQueue,getActionName } from "js/actionQueue.js";
 
-let monster = null;
 const MONSTER_TYPES = {
   1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 60000 },
   2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 120000 },
@@ -10,20 +11,6 @@ const MONSTER_TYPES = {
   4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', condition: (pop) => pop >= 150000 },
   5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', condition: (pop) => pop >= 150000 }
 };
-  const SIZE = 16;
-  let money = 2500;
-  let food = 1000;
-  let population = 0;
-  let turn = 0;
-  let achievementPoints = 0;
-  let tutorialMissions = {
-      '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
-  };
-  let map = [];
-  let selectedX = null, selectedY = null;
-  let actionQueue = [];
-  let islandName = "MyIsland";
-  let warships = []; // 軍艦の配列を追加
   let economicCrisisTurns = 0; // 経済危機の残りターン数
   let frozenMoney = 0; // 経済危機による凍結資金
   let volcanoTurns = 0; // 火山の噴火 残りターン数
@@ -637,12 +624,12 @@ function loadMyIslandState() {
 
 // ゲームを初期設定に戻す関数
 function resetGame() {
-    money = 2500;
-    food = 1000;
-    population = 0;
-    turn = 0;
-    islandName = "MyIsland";
-    monster = null;
+    setMoney(2500);
+    setFood(1000);
+    setPop(0);
+    setTurn(0);
+    setName("MyIsland");
+    setMonster(null);
     monsters = [];
     actionQueue = [];
     warships = []; // 軍艦データをリセット
