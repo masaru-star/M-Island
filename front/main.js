@@ -4,61 +4,6 @@ import { initMap,renderMap } from "js/map.js";
 import { earthquakeEffect } from "js/earthquake.js";
 import { renderActionQueue,getActionName } from "js/actionQueue.js";
 
-/**
- * 軍艦がダメージを受けた際に、火災または弾薬庫の発火を判定する
- * @param {object} warship ダメージを受けた軍艦オブジェクト
- * @param {number} damage 実際に受けたダメージ量 (今回は使用しないが汎用性のために残す)
- */
-function checkAbnormalityOnDamage(warship, damage) {
-    // 既に異常状態か、沈没している場合はスキップ
-    if (warship.currentDurability <= 0 || warship.abnormality !== null) {
-        return; 
-    }
-    let newAbnormality = null;
-    if (warship.currentAmmo >= 1000 && Math.random() < 0.30) {
-        newAbnormality = 'ammoFire'; 
-    }
-    if (newAbnormality === null && Math.random() < 0.10) {
-        newAbnormality = 'fire';
-    }
-        if (newAbnormality !== null) {
-        warship.abnormality = newAbnormality;
-        if (newAbnormality === 'fire') {
-            logAction(`軍艦 ${warship.name} に火災が発生しました！`);
-        } else if (newAbnormality === 'ammoFire') {
-            logAction(`軍艦 ${warship.name} の弾薬庫が発火しました！`);
-        }
-    }
-}
-/**
- * 砲撃が命中した際に、通信障害または浸水を判定する
- * @param {object} target 命中した軍艦オブジェクト
- */
-function checkAbnormalityOnHit(target) {
-    if (target.currentDurability <= 0 || target.abnormality !== null) {
-        return;
-    }
-    
-    let newAbnormality = null;
-    if (target.currentDurability <= 50 && Math.random() < 0.05) {
-        newAbnormality = 'flooding';
-    }
-
-    // 1. 通信障害の判定 (命中した際、1%の確率)
-    // 自島にいる場合は発生しない (isDispatchedがtrueの時のみ発生)
-    if (newAbnormality === null && target.isDispatched && Math.random() < 0.01) {
-        newAbnormality = 'commFailure'; 
-    }
-
-    if (newAbnormality !== null) {
-        target.abnormality = newAbnormality;
-        if (newAbnormality === 'flooding') {
-            logAction(`軍艦 ${target.name} に浸水が発生しました！`);
-        } else if (newAbnormality === 'commFailure') {
-            logAction(`軍艦 ${target.name} に通信障害が発生しました！`);
-        }
-    }
-}
 // 計画を撤回する関数
 window.cancelAction = function (index) {
     if (index >= 0 && index < actionQueue.length) {
