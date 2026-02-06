@@ -731,28 +731,19 @@ function loadMyIslandState() {
     if (storedState) {
         myIslandState = JSON.parse(storedState);
     } else {
-        // 初回ロード時や保存されていない場合は初期状態
-        myIslandState = {
-            map: [], // initMapで生成される
-            money: 2500,
-            food: 1000,
-            population: 0,
-            turn: 0,
-            achievementPoints: 0,
-            tutorialMissions: {
-            '01': false, '02': false, '03': false, '04': false, '05': false, '06': false, '07': false, '08': false
-        },
-            islandName: "MyIsland",
-            monster: null,
-            monsters: [],
-            actionQueue: [],
-            warships: [], // 軍艦データを初期化
-            economicCrisisTurns: 0,
-            frozenMoney: 0,
-            volcanoTurns: 0
-        };
-        initMap(); // 初期マップ生成
-        saveMyIslandState(); // 初期状態を保存
+      // エラーが発生した場合のアラート表示
+            const res = confirm("データを読み込めませんでした。一度初期化すると直る可能性があります。\n\n「OK」を押すとデータを破棄して初期化します。\n「キャンセル」を押すと戻ります（後で計画一覧から初期化できます）。");
+            if (res) {
+                // データを破棄して初期化
+                localStorage.removeItem('myIslandState');
+                resetGame(); // 初期化関数を呼び出す
+                logAction("データを破棄し、島を初期化しました。");
+            } else {
+                // 何もしない（空の状態で開始、あるいは手動初期化を待つ）
+                initMap(); 
+                renderMap();
+                updateStatus();
+            }
     }
 
     map = JSON.parse(JSON.stringify(myIslandState.map));
