@@ -35,18 +35,6 @@ SOFTWARE. -->
     ※セーブデータは直接ファイルとして保存されません。上記のテキストエリアに表示されたデータをコピーして、テキストファイルに貼り付けて保存してください。<br>
     ロードする際は、保存したデータを上記のテキストエリアに貼り付けてから「ロード」ボタンを押してください。
   </p>
-<button id="openBtn">貢献者の一覧/ソースコード</button>
-</div>
-<div id="modalOverlay" class="overlay">
-  <div class="modal-content">
-    <h2>List of contributors</h2>
-<p>本作は「箱庭諸島」のリスペクト作品です。 This work is a tribute to "箱庭諸島".<br><br>
-Original Inspired by: 徳岡宏樹（箱庭諸島）<br>
-Developer: <a href="https://github.com/masaru-star">masaru-star</a></p>
-<a href="https://codeberg.org/masaru-star/M-Island"><img alt="Static Badge" src="https://img.shields.io/badge/Codeberg-%232185D0?style=flat&logo=codeberg&logoColor=black"></a>
-<a href="https://github.com/masaru-star/M-Island"><img alt="Static Badge" src="https://img.shields.io/badge/GitHub-%23000?style=flat&logo=github&logoColor=white"></a>
-    <button id="closeBtn">close</button>
-  </div>
 </div>
 <script>
   const openBtn = document.getElementById('openBtn');
@@ -64,6 +52,18 @@ window.addEventListener('click', (e) => {
   }
 });
 </script>
+<button id="openBtn">貢献者の一覧/ソースコード</button>
+<div id="modalOverlay" class="overlay">
+  <div class="modal-content">
+    <h2>List of contributors</h2>
+<p>本作は「箱庭諸島」のリスペクト作品です。 This work is a tribute to "箱庭諸島".<br><br>
+Original Inspired by: 徳岡宏樹（箱庭諸島）<br>
+Developer: <a href="https://github.com/masaru-star">masaru-star</a></p>
+<a href="https://codeberg.org/masaru-star/M-Island" target="_blank" rel="noopener noreferrer"><img alt="Static Badge" src="https://img.shields.io/badge/Codeberg-%232185D0?style=flat&logo=codeberg&logoColor=black"></a>
+<a href="https://github.com/masaru-star/M-Island" target="_blank" rel="noopener noreferrer"><img alt="Static Badge" src="https://img.shields.io/badge/GitHub-%23000?style=flat&logo=github&logoColor=white"></a>
+    <button id="closeBtn">close</button>
+  </div>
+</div>
 <details>
   <summary>Ver.4.6.6リリースノート</summary><p>
     <div style="margin-top: 1em; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
