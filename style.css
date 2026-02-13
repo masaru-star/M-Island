@@ -100,15 +100,36 @@ td {
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
-/* 背景のオーバーレイ */
+
+
+noscript {
+  display: block;
+}
 .NOJS-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
   z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.95);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  text-align: center; 
+  font-family: sans-serif;
+  padding: 20px;
+}
+/* メッセージの装飾 */
+.NOJS-overlay h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #ff4b2b;
+}
+.NOJS-overlay p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  max-width: 600px;
 }
