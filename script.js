@@ -130,8 +130,8 @@ function getActionName(action, x, y, extraData) {
         name += ` (コード: ${extraData.code.substring(0, 10)}...)`;
     } else if (action === 'dig' && extraData && extraData.oilFactor && extraData.oilFactor > 1) {
         let cost = 300;
-        cost = cost = 300 * extraData.oilFactor ** 2;
-    name += ` (予算:${cost} レベル:${extraData.oilFactor})`;
+        cost = 300 * extraData.oilFactor ** 2;
+        name += ` (予算:${cost} レベル:${extraData.oilFactor})`;
     }
     
     // 座標の表示
