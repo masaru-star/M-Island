@@ -1,10 +1,10 @@
 let monster = null;
 const MONSTER_TYPES = {
-  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 60000 },
-  2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 120000 },
-  3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', condition: (pop) => pop >= 120000 },
-  4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', condition: (pop) => pop >= 150000 },
-  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', condition: (pop) => pop >= 150000 }
+  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 100000 },
+  2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 150000 },
+  3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', condition: (pop) => pop >= 150000 },
+  4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', condition: (pop) => pop >= 200000 },
+  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', condition: (pop) => pop >= 200000 }
 };
   const SIZE = 16;
   let money = 2500;
@@ -3018,7 +3018,7 @@ const warshipMaintenance = activeWarshipCount * 20000;
 let maintenanceCost = facilityMaintenance + warshipMaintenance;
 let maintenanceMultiplier = 1;
 if (economicCrisisTurns > 0) {
-    maintenanceMultiplier = 16; // 経済危機中は維持費16倍
+    maintenanceMultiplier = 12; // 経済危機中は維持費12倍
 }
 const actualMaintenanceCost = maintenanceCost * maintenanceMultiplier;
 if (actualMaintenanceCost > 0) {
