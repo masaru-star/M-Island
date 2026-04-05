@@ -1689,7 +1689,6 @@ turn++;
                               // その後、貫通弾の効果を適用（既存の攻撃ロジックに流れる）
                           } else { // 貫通弾でなければ防衛施設が守る
                               logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
-                              turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
                               continue; // 次の攻撃へ
                           }
                       }
@@ -2159,7 +2158,6 @@ const newWarship = {
                 } else { // 貫通弾でなければ防衛施設が守る
                     renderMap();
                     logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
-                    turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
                     continue; // 次の攻撃へ
                 }
             }
