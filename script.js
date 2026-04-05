@@ -102,7 +102,7 @@ function getActionName(action, x, y, extraData) {
         buildFarm: '農場建設', buildFactory: '工場建設', enhanceFacility: '設備強化', buildPort: '港建設',
         buildGun: '砲台建設', buildDefenseFacility: '防衛施設建設', flatten: '整地', landfill: '埋め立て',
         dig: '掘削', cutForest: '伐採', plantForest: '植林', exportFood: '食料輸出',
-        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
+        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', randomBombard: 'ランダム弾砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
         goToOtherIsland: '他の島に行く', returnToMyIsland: '自島に戻る', buildWarship: '軍艦建造',
         refuelWarship: '燃料補給', resupplyWarshipAmmo: '弾薬補給', repairWarship: '軍艦修理',
         enhanceWarship: '軍艦増強', decommissionWarship: '軍艦除籍', dispatchWarship: '軍艦派遣',
@@ -114,7 +114,7 @@ function getActionName(action, x, y, extraData) {
     // 計画の詳細情報を名前に組み込む
     if (action === 'exportFood' && extraData && extraData.amount) {
         name += ` (${extraData.amount * 20} 食料)`;
-    } else if ((action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') && extraData && extraData.count) {
+    } else if ((action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') && extraData && extraData.count) {
         name += ` (${extraData.count} 発)`;
     } else if (action === 'refuelWarship' && extraData && extraData.amount) {
         name += ` (${extraData.amount} 燃料)`;
@@ -138,6 +138,14 @@ function getActionName(action, x, y, extraData) {
     let coord = (x !== null && y !== null) ? `(${x},${y})` : '';
 
     return { name, coord };
+}
+
+function getBombardTypeLabel(action) {
+    if (action === 'bombard') return '砲撃';
+    if (action === 'spreadBombard') return '拡散弾砲撃';
+    if (action === 'ppBombard') return 'PP弾砲撃';
+    if (action === 'randomBombard') return 'ランダム弾砲撃';
+    return '砲撃';
 }
 
 // 計画キューの表示を更新する関数
@@ -369,7 +377,7 @@ window.updateConfirmButton = function () {
   }
   if (action === 'exportFood') {
       document.getElementById('exportAmount').style.display = 'inline-block';
-  } else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
+  } else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') {
       document.getElementById('bombardCount').style.display = 'inline-block';
   } else if (action === 'goToOtherIsland' || action === 'dispatchWarship') {
       document.getElementById('touristCodeInput').style.display = 'inline-block';
@@ -1063,8 +1071,8 @@ window.confirmAction = function () {
     }
 const keepOptionSelected = document.getElementById('keepOptionSelected').checked;
   if (isViewingOtherIsland) {
-      if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
-          if (!targetTileSelected) {
+      if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') {
+          if (action !== 'randomBombard' && !targetTileSelected) {
               logAction(`砲撃対象のタイルを選択してください`);
               return;
           }
@@ -1085,10 +1093,12 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
           // 行動内容を圧縮・暗号化して他島への行動テキストボックスに出力
           const actionData = {
               type: action,
-              x: selectedX,
-              y: selectedY,
               count: count
           };
+          if (action !== 'randomBombard') {
+              actionData.x = selectedX;
+              actionData.y = selectedY;
+          }
           // 新しいエンコード方式 (btoaとencodeURIComponentを組み合わせる)
           const encodedAction = btoa(encodeURIComponent(JSON.stringify(actionData)));
           document.getElementById('actionForOtherIslandOutput').value = encodedAction;
@@ -1130,7 +1140,7 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
     } else {
       logAction(`食料輸出に失敗しました（輸出数が未指定または無効）`);
     }
-  } else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
+  } else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') {
     const count = parseInt(document.getElementById('bombardCount').value);
     if (isNaN(count) || count <= 0) {
       logAction(`砲撃の数が正しく指定されていません`);
@@ -1145,6 +1155,7 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
     if (action === 'bombard') cost = count * 120;
     else if (action === 'spreadBombard') cost = count * 500;
     else if (action === 'ppBombard') cost = count * 10000000; // PP弾の価格を更新
+    else if (action === 'randomBombard') cost = count * 500000;
 
     if (money < cost) {
       logAction(`砲撃に失敗しました（資金不足）`);
@@ -1154,8 +1165,12 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
       logAction(`砲撃に失敗しました（保有砲台数を超えています）`);
       return;
     }
-    actionQueue.push({ x: selectedX, y: selectedY, action, count });
-    logAction(`(${selectedX},${selectedY}) に ${count}発の${action === 'bombard' ? '砲撃' : action === 'spreadBombard' ? '拡散弾砲撃' : 'PP弾砲撃'}を計画しました`);
+    actionQueue.push({ x: action === 'randomBombard' ? null : selectedX, y: action === 'randomBombard' ? null : selectedY, action, count });
+    if (action === 'randomBombard') {
+      logAction(`${count}発のランダム弾砲撃を計画しました`);
+    } else {
+      logAction(`(${selectedX},${selectedY}) に ${count}発の${getBombardTypeLabel(action)}を計画しました`);
+    }
   } else if (action === 'selfDestructMilitaryFacility') { // 名称変更
     if (tile && (tile.facility === 'gun' || tile.facility === 'defenseFacility')) {
       actionQueue.push({ x: selectedX, y: selectedY, action });
@@ -1629,8 +1644,9 @@ turn++;
           const jsonString = decodeURIComponent(atob(otherIslandActionCode));
           const incomingAction = JSON.parse(jsonString);
 
-          if ((incomingAction.type === 'bombard' || incomingAction.type === 'spreadBombard' || incomingAction.type === 'ppBombard') &&
-              incomingAction.x !== undefined && incomingAction.y !== undefined && incomingAction.count !== undefined) {
+          if ((incomingAction.type === 'bombard' || incomingAction.type === 'spreadBombard' || incomingAction.type === 'ppBombard' || incomingAction.type === 'randomBombard') &&
+              incomingAction.count !== undefined &&
+              (incomingAction.type === 'randomBombard' || (incomingAction.x !== undefined && incomingAction.y !== undefined))) {
               const { x, y, type, count } = incomingAction;
               let errorRange = 1;
               if (type === 'bombard') {
@@ -1639,30 +1655,39 @@ turn++;
                   errorRange = 2;
               } else if (type === 'ppBombard') {
                   errorRange = 0;
+              } else if (type === 'randomBombard') {
+                  errorRange = 0;
               }
 
-              logAction(`他島から ${count}発の${type === 'bombard' ? '砲撃' : type === 'spreadBombard' ? '拡散弾砲撃' : 'PP弾砲撃'}を受けました！`);
+              logAction(`他島から ${count}発の${getBombardTypeLabel(type)}を受けました！`);
               for (let i = 0; i < count; i++) {
-                  let dx = 0;
-                  let dy = 0;
-                  if (errorRange > 0) {
-                      dx = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
-                      dy = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+                  let tx = 0;
+                  let ty = 0;
+                  if (type === 'randomBombard') {
+                      tx = Math.floor(Math.random() * SIZE);
+                      ty = Math.floor(Math.random() * SIZE);
+                  } else {
+                      let dx = 0;
+                      let dy = 0;
+                      if (errorRange > 0) {
+                          dx = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+                          dy = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+                      }
+                      tx = x + dx;
+                      ty = y + dy;
                   }
-                  const tx = x + dx;
-                  const ty = y + dy;
 
                   if (tx >= 0 && ty >= 0 && tx < SIZE && ty < SIZE) {
                       const protectingFacility = getProtectingDefenseFacility(tx, ty); // 変更点
 
                       if (protectingFacility) { // 防衛施設があった場合
-                          if (type === 'ppBombard') { // PP弾だった場合
+                          if (type === 'ppBombard' || type === 'randomBombard') { // PP弾・ランダム弾だった場合
                               protectingFacility.facility = null; // 防衛施設を破壊
                               protectingFacility.terrain = 'waste'; // 防衛施設の場所を荒地にする
                               protectingFacility.enhanced = false; // 強化状態もリセット
-                              logAction(`(${tx},${ty}) を守っていた防衛施設がPP弾により破壊されました！`);
-                              // その後、PP弾の効果を適用（既存の攻撃ロジックに流れる）
-                          } else { // PP弾でなければ防衛施設が守る
+                              logAction(`(${tx},${ty}) を守っていた防衛施設が${getBombardTypeLabel(type)}により破壊されました！`);
+                              // その後、貫通弾の効果を適用（既存の攻撃ロジックに流れる）
+                          } else { // 貫通弾でなければ防衛施設が守る
                               logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
                               turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
                               continue; // 次の攻撃へ
@@ -2079,7 +2104,7 @@ const newWarship = {
         }
     }
 }
-    else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard') {
+    else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') {
       const count = task.count || 1;
       const guns = map.flat().filter(t => t.facility === 'gun').length;
       let costPerShot = 0;
@@ -2093,33 +2118,45 @@ const newWarship = {
       } else if (action === 'ppBombard') {
           costPerShot = 10000000; // PP弾の価格を更新
           errorRange = 0; // 誤差なし
+      } else if (action === 'randomBombard') {
+          costPerShot = 500000;
+          errorRange = 0;
       }
 
       const usableGuns = Math.min(count, guns, Math.floor(money / costPerShot));
 
       if (usableGuns > 0) {
         let hits = 0;
+        let shotsFired = 0;
         for (let i = 0; i < usableGuns; i++) {
-          let dx = 0;
-          let dy = 0;
-          if (errorRange > 0) {
-            dx = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
-            dy = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+          shotsFired++;
+          let tx = 0;
+          let ty = 0;
+          if (action === 'randomBombard') {
+            tx = Math.floor(Math.random() * SIZE);
+            ty = Math.floor(Math.random() * SIZE);
+          } else {
+            let dx = 0;
+            let dy = 0;
+            if (errorRange > 0) {
+              dx = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+              dy = Math.floor(Math.random() * (2 * errorRange + 1)) - errorRange;
+            }
+            tx = x + dx;
+            ty = y + dy;
           }
-          const tx = x + dx;
-          const ty = y + dy;
 
           if (tx >= 0 && ty >= 0 && tx < SIZE && ty < SIZE) {
             const protectingFacility = getProtectingDefenseFacility(tx, ty); // 変更点
 
             if (protectingFacility) { // 防衛施設があった場合
-                if (action === 'ppBombard') { // PP弾だった場合
+                if (action === 'ppBombard' || action === 'randomBombard') { // PP弾・ランダム弾だった場合
                     protectingFacility.facility = null; // 防衛施設を破壊
                     protectingFacility.terrain = 'waste'; // 防衛施設の場所を荒地にする
                     protectingFacility.enhanced = false; // 強化状態もリセット
-                    logAction(`(${tx},${ty}) を守っていた防衛施設がPP弾により破壊されました！`);
-                    // その後、PP弾の効果を適用（既存の攻撃ロジックに流れる）
-                } else { // PP弾でなければ防衛施設が守る
+                    logAction(`(${tx},${ty}) を守っていた防衛施設が${getBombardTypeLabel(action)}により破壊されました！`);
+                    // その後、貫通弾の効果を適用（既存の攻撃ロジックに流れる）
+                } else { // 貫通弾でなければ防衛施設が守る
                     renderMap();
                     logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
                     turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
@@ -2198,7 +2235,11 @@ const newWarship = {
             logAction(`砲撃は領域外に着弾しました (${tx},${ty})`);
           }
         }
-        money -= hits * costPerShot; // 成功した砲撃の数だけ費用を引く
+        if (action === 'randomBombard') {
+          money -= shotsFired * costPerShot;
+        } else {
+          money -= hits * costPerShot; // 成功した砲撃の数だけ費用を引く
+        }
       } else {
         logAction(`砲撃は実行されませんでした。`);
       }
