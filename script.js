@@ -1716,7 +1716,6 @@ turn++;
                               // その後、貫通弾の効果を適用（既存の攻撃ロジックに流れる）
                           } else { // 貫通弾でなければ防衛施設が守る
                               logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
-                              turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
                               continue; // 次の攻撃へ
                           }
                       }
@@ -2262,7 +2261,6 @@ const newWarship = {
                 } else { // 貫通弾でなければ防衛施設が守る
                     renderMap();
                     logAction(`砲撃は防衛施設により無効化されました (${tx},${ty})`);
-                    turnTileEffects.push({ x: tx, y: ty, type: 'blue' });
                     continue; // 次の攻撃へ
                 }
             }
@@ -3130,7 +3128,7 @@ const warshipMaintenance = activeWarshipCount * 20000;
 let maintenanceCost = facilityMaintenance + warshipMaintenance;
 let maintenanceMultiplier = 1;
 if (economicCrisisTurns > 0) {
-    maintenanceMultiplier = 16; // 経済危機中は維持費16倍
+    maintenanceMultiplier = 12; // 経済危機中は維持費12倍
 }
 const actualMaintenanceCost = maintenanceCost * maintenanceMultiplier;
 if (actualMaintenanceCost > 0) {
