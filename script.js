@@ -1,10 +1,13 @@
 let monster = null;
 const MONSTER_TYPES = {
-  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, condition: (pop) => pop >= 100000 },
-  2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', condition: (pop) => pop >= 150000 },
-  3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', condition: (pop) => pop >= 150000 },
-  4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', condition: (pop) => pop >= 200000 },
-  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', condition: (pop) => pop >= 200000 }
+  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 60000 },
+  2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 120000 },
+  3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 120000 },
+  4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 150000 },
+  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 150000 },
+  6: { name: 'シルバガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 5000, defeatMoney: 5000000, condition: (pop, currentTurn) => pop >= 100000 && currentTurn >= 3000 },
+  7: { name: 'ゴルドガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 50000, defeatMoney: 50000000, condition: (pop, currentTurn) => pop >= 130000 && currentTurn >= 3000 },
+  8: { name: 'プラチガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 500000, defeatMoney: 250000000, condition: (pop, currentTurn) => pop >= 150000 && currentTurn >= 3000 }
 };
   const SIZE = 16;
   let money = 2500;
@@ -102,7 +105,7 @@ function getActionName(action, x, y, extraData) {
         buildFarm: '農場建設', buildFactory: '工場建設', enhanceFacility: '設備強化', buildPort: '港建設',
         buildGun: '砲台建設', buildDefenseFacility: '防衛施設建設', flatten: '整地', landfill: '埋め立て',
         dig: '掘削', cutForest: '伐採', plantForest: '植林', exportFood: '食料輸出',
-        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', randomBombard: 'ランダム弾砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
+        bombard: '砲撃', spreadBombard: '拡散弾砲撃', ppBombard: 'PP弾砲撃', randomBombard: 'ランダム弾砲撃', concentratedFire: '集中砲撃', selfDestructMilitaryFacility: '軍事施設自爆',
         goToOtherIsland: '他の島に行く', returnToMyIsland: '自島に戻る', buildWarship: '軍艦建造',
         refuelWarship: '燃料補給', resupplyWarshipAmmo: '弾薬補給', repairWarship: '軍艦修理',
         enhanceWarship: '軍艦増強', decommissionWarship: '軍艦除籍', dispatchWarship: '軍艦派遣',
@@ -242,16 +245,28 @@ function getGunCount() {
 
     if (targetMap.length === 0) return 0;
 
-    // mapを走査して砲台 (facility: 'gun') の数を数える
+    // mapを走査して砲台 (facility: 'gun') の砲撃可能数を数える
     let count = 0;
     targetMap.forEach(row => {
         row.forEach(tile => {
             if (tile.facility === 'gun') {
-                count++;
+                count += tile.enhanced ? 3 : 1; // 高効率砲台は3連装
             }
         });
     });
     return count;
+}
+
+function handleMonsterDefeat(monster, customMessage) {
+    const monsterType = MONSTER_TYPES[monster.typeId] || { name: '怪獣', defeatMoney: 0 };
+    monsters = monsters.filter(m => m !== monster);
+    if (customMessage) {
+        logAction(customMessage);
+    }
+    if (monsterType.defeatMoney && monsterType.defeatMoney > 0) {
+        money += monsterType.defeatMoney;
+        logAction(`${monsterType.name}の討伐報奨金として${monsterType.defeatMoney}Gを獲得しました！`);
+    }
 }
 function initMap() {
   map = Array.from({ length: SIZE }, (_, y) =>
@@ -502,6 +517,7 @@ function showTileInfo(x, y) {
         if (tile.facility === 'farm') facilityName = '強化農場';
         if (tile.facility === 'factory') facilityName = '強化工場';
         if (tile.facility === 'oilRig') facilityName = '高効率海底油田';
+        if (tile.facility === 'gun') facilityName = '高効率砲台';
     }
     info += ` / 建物: ${facilityName}`;
     if (tile.facility === 'house' && !isViewingOtherIsland) info += ` (人口: ${tile.pop})`; // 他の島では人口表示なし
@@ -972,8 +988,7 @@ function handleWarshipAttacks() {
                     monsterHit.hp -= 1; // ダメージ
                     
                     if (monsterHit.hp <= 0) {
-                        monsters = monsters.filter(m => m !== monsterHit); // 配列から削除
-                        logAction(`${warship.name} は ${targetType} を討伐し、${expGained} EXPを獲得しました！`);
+                        handleMonsterDefeat(monsterHit, `${warship.name} は ${targetType} を討伐し、${expGained} EXPを獲得しました！`);
                     } else {
                         logAction(`${warship.name} は ${targetType} に命中！ (残り体力: ${monsterHit.hp})`);
                     }
@@ -1120,7 +1135,7 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
   }
 
   if (!action) return;
-  const requiresTileSelection = ['buildFarm', 'buildFactory', 'buildPort', 'buildGun', 'buildDefenseFacility', 'buildWarship', 'refuelWarship', 'resupplyWarshipAmmo', 'repairWarship', 'dispatchWarship', 'requestWarshipReturn', 'flatten', 'landfill', 'dig', 'cutForest', 'plantForest', 'enhanceFacility', 'selfDestructMilitaryFacility', 'bombard', 'spreadBombard', 'ppBombard'];
+  const requiresTileSelection = ['buildFarm', 'buildFactory', 'buildPort', 'buildGun', 'buildDefenseFacility', 'buildWarship', 'refuelWarship', 'resupplyWarshipAmmo', 'repairWarship', 'dispatchWarship', 'requestWarshipReturn', 'flatten', 'landfill', 'dig', 'cutForest', 'plantForest', 'enhanceFacility', 'selfDestructMilitaryFacility', 'bombard', 'spreadBombard', 'ppBombard', 'concentratedFire'];
   if (requiresTileSelection.includes(action) && !targetTileSelected) {
     logAction(`アクションの対象タイルを選択してください`);
     return;
@@ -1171,6 +1186,18 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
     } else {
       logAction(`(${selectedX},${selectedY}) に ${count}発の${getBombardTypeLabel(action)}を計画しました`);
     }
+  } else if (action === 'concentratedFire') {
+    const latestAction = actionQueue[actionQueue.length - 1];
+    if (latestAction && latestAction.action === 'concentratedFire') {
+      if (actionQueue.length + 2 > MAX_QUEUE_SIZE) {
+        logAction(`計画キューに空きが足りないため、集中砲撃を追加できません。`);
+        return;
+      }
+      actionQueue.push({ x: null, y: null, action: 'delayAction', autoInserted: true });
+      logAction(`集中砲撃の連続を防ぐため、遅延行動を自動挿入しました。`);
+    }
+    actionQueue.push({ x: selectedX, y: selectedY, action: 'concentratedFire' });
+    logAction(`(${selectedX},${selectedY}) に集中砲撃を計画しました`);
   } else if (action === 'selfDestructMilitaryFacility') { // 名称変更
     if (tile && (tile.facility === 'gun' || tile.facility === 'defenseFacility')) {
       actionQueue.push({ x: selectedX, y: selectedY, action });
@@ -1737,14 +1764,13 @@ turn++;
                           target.terrain = 'waste';
                           logAction(`他島からの砲撃により (${tx},${ty}) が破壊されました`);
                       }
-                      const monsterHit = monsters.find(m => m.x === tx && m.y === ty);
+                          const monsterHit = monsters.find(m => m.x === tx && m.y === ty);
                       if (monsterHit) {
                           monsterHit.hp -= 1;
                           const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
                           logAction(`他島からの砲撃が ${monsterName} に命中！ (残り体力: ${monsterHit.hp})`);
                           if (monsterHit.hp <= 0) {
-                              monsters = monsters.filter(m => m !== monsterHit);
-                              logAction(`${monsterName} は討伐されました！`);
+                              handleMonsterDefeat(monsterHit, `${monsterName} は討伐されました！`);
                           }
                       }
                   } else {
@@ -1853,6 +1879,7 @@ turn++;
 
   // 行動キューの処理 (最大2つまで実行)
 const ACTIONS_PER_TURN = 2; // 1ターンに実行する計画の数
+let previousExecutedAction = null;
 for (let i = 0; i < ACTIONS_PER_TURN; i++) {
     if (actionQueue.length === 0) {
         break; // キューが空になったら終了
@@ -1913,6 +1940,82 @@ const newWarship = {
         }
     };
     if (action === 'delayAction') {
+        previousExecutedAction = 'delayAction';
+    }
+    else if (action === 'concentratedFire') {
+        if (previousExecutedAction === 'concentratedFire') {
+            logAction(`連続する集中砲撃は無効化されました。`);
+            continue;
+        }
+        const targetX = x;
+        const targetY = y;
+        const availableWarships = warships.filter(ship =>
+            ship.currentDurability > 0 &&
+            !ship.isDispatched &&
+            ship.currentAmmo > 0 &&
+            ship.currentFuel > 0 &&
+            ship.abnormality !== 'fire' &&
+            !(ship.x === targetX && ship.y === targetY)
+        );
+        if (availableWarships.length === 0) {
+            logAction(`(${targetX},${targetY}) への集中砲撃は実行されませんでした（攻撃可能な軍艦がありません）。`);
+            previousExecutedAction = 'concentratedFire';
+            continue;
+        }
+        logAction(`(${targetX},${targetY}) へ集中砲撃を開始します。`);
+        for (const ship of availableWarships) {
+            if (ship.currentAmmo <= 0 || ship.currentFuel <= 0) continue;
+            ship.currentAmmo -= 1;
+            ship.currentFuel = Math.max(0, ship.currentFuel - 1);
+            logAction(`軍艦「${ship.name}」が (${targetX},${targetY}) に砲撃しました。`);
+            const monsterHit = monsters.find(m => m.x === targetX && m.y === targetY);
+            if (monsterHit) {
+                monsterHit.hp -= 1;
+                const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
+                if (monsterHit.hp <= 0) {
+                    handleMonsterDefeat(monsterHit, `${monsterName} は集中砲撃により討伐されました！`);
+                } else {
+                    logAction(`${monsterName} に命中！ (残り体力: ${monsterHit.hp})`);
+                }
+                continue;
+            }
+            const targetTile = map[targetY][targetX];
+            if (targetTile.terrain === 'mountain') {
+                logAction(`集中砲撃は山に着弾しましたが、被害はありませんでした。 (${targetX},${targetY})`);
+                continue;
+            }
+            if (targetTile.terrain === 'sea') {
+                if (targetTile.facility === 'port') {
+                    targetTile.facility = null;
+                    logAction(`集中砲撃により (${targetX},${targetY}) の港が破壊されました。`);
+                    continue;
+                }
+                const targetWarship = warships.find(w => w.x === targetX && w.y === targetY && w !== ship);
+                if (targetWarship && !targetWarship.isDispatched) {
+                    targetWarship.currentDurability -= 1;
+                    if (targetWarship.currentDurability <= 0) {
+                        targetWarship.currentDurability = 0;
+                        targetWarship.currentAmmo = 0;
+                        targetWarship.currentFuel = 0;
+                        logAction(`集中砲撃により軍艦「${targetWarship.name}」が撃沈されました！`);
+                    } else {
+                        logAction(`集中砲撃が軍艦「${targetWarship.name}」に命中！ (残り耐久: ${targetWarship.currentDurability})`);
+                    }
+                } else {
+                    logAction(`集中砲撃は海に着弾しました。 (${targetX},${targetY})`);
+                }
+            } else {
+                if (targetTile.facility === 'house') {
+                    population -= targetTile.pop;
+                    if (population < 0) population = 0;
+                }
+                targetTile.facility = null;
+                targetTile.enhanced = false;
+                targetTile.terrain = 'waste';
+                logAction(`集中砲撃により (${targetX},${targetY}) が破壊されました。`);
+            }
+        }
+        previousExecutedAction = 'concentratedFire';
     }
     else if (action === 'buildFarm') {
       if (tile && tile.terrain === 'plain' && money >= 100) {
@@ -2002,7 +2105,7 @@ const newWarship = {
         handleHouseOverwrite(tile);
         tile.facility = 'gun'; money -= 1200; tile.enhanced = false; // 強化状態もリセット
         logAction(`(${x},${y}) に砲台を建設しました`);
-        const guns = map.flat().filter(t => t.facility === 'gun').length;
+        const guns = getGunCount();
         checkAndCompleteMission('05', 1, 0, 1000,() => guns >= 3,'砲撃可能数が3以上になる');
       } else logAction(`(${x},${y}) の砲台建設は失敗しました（条件不適合または資金不足）`);
     }
@@ -2105,7 +2208,7 @@ const newWarship = {
 }
     else if (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard') {
       const count = task.count || 1;
-      const guns = map.flat().filter(t => t.facility === 'gun').length;
+      const guns = getGunCount();
       let costPerShot = 0;
       let errorRange = 1; // 砲撃の誤差範囲
       if (action === 'bombard') {
@@ -2169,8 +2272,7 @@ const newWarship = {
                 const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
                 logAction(`砲撃が ${monsterName} に命中！ (残り体力: ${monsterHit.hp})`);
                 if (monsterHit.hp <= 0) {
-                    monsters = monsters.filter(m => m !== monsterHit);
-                    logAction(`${monsterName} が砲撃により討伐されました‼`);
+                    handleMonsterDefeat(monsterHit, `${monsterName} が砲撃により討伐されました‼`);
                 }
                 hits++; // 命中カウント
                 continue; // タイル破壊はスキップ
@@ -2277,8 +2379,7 @@ const newWarship = {
                             const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
                             logAction(`自爆により ${monsterName} (${nx},${ny}) は${damage}のダメージを受けました。残り体力: ${monsterHit.hp}`);
                             if (monsterHit.hp <= 0) {
-                                monsters = monsters.filter(m => m !== monsterHit);
-                                logAction(`${monsterName} は自爆に巻き込まれ討伐されました！`);
+                                handleMonsterDefeat(monsterHit, `${monsterName} は自爆に巻き込まれ討伐されました！`);
                             }
                         }
                     }
@@ -2310,7 +2411,7 @@ const newWarship = {
         }
     }
     else if (action === 'enhanceFacility') { // 設備強化
-        if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig') && !tile.enhanced && money >= 10000) {
+        if (tile && (tile.facility === 'farm' || tile.facility === 'factory'|| tile.facility === 'oilRig' || tile.facility === 'gun') && !tile.enhanced && money >= 10000) {
 tile.enhanced = true;
         money -= 10000;
         
@@ -2318,6 +2419,7 @@ tile.enhanced = true;
         if (tile.facility === 'farm') facilityName = '農場';
         else if (tile.facility === 'factory') facilityName = '工場';
         else if (tile.facility === 'oilRig') facilityName = '海底油田';
+        else if (tile.facility === 'gun') facilityName = '高効率砲台';
         logAction(`(${x},${y}) の${facilityName}が強化されました。`);
             checkAndCompleteMission('04', 1, 0, 1000, () => true, '工場または農場に設備強化を行う');
         } else {
@@ -2798,7 +2900,7 @@ if (turn >= 1000 && Math.random() < 0.001) { // 0.1% = 0.001
           const type = MONSTER_TYPES[typeId];
           
           // 3. 出現条件チェック (人口) と確率 (1%)
-          if (type.condition(population) && Math.random() < 0.01) {
+          if (type.condition(population, turn) && Math.random() < 0.01) {
               
               // 4. 出現場所の決定 (候補地からランダム)
               if (spawnCandidates.length === 0) break; 
@@ -2845,6 +2947,10 @@ if (turn >= 1000 && Math.random() < 0.001) { // 0.1% = 0.001
       
       const monsterType = MONSTER_TYPES[monster.typeId];
       if (!monsterType) continue; // 不明な怪獣はスキップ
+      if (monsterType.moneyPerTurn && monsterType.moneyPerTurn > 0) {
+          moneyChange += monsterType.moneyPerTurn;
+          logAction(`${monsterType.name} が${monsterType.moneyPerTurn}Gを生産しました。`);
+      }
 
       // 1. 移動処理 (アエロガロスは特別)
       let moveCount = 1;
@@ -3001,19 +3107,23 @@ if (turn >= 1000 && Math.random() < 0.001) { // 0.1% = 0.001
   }
 
 let gunCount = 0;
+let enhancedGunCount = 0;
 let defenseFacilityCount = 0;
 let portCount = 0;
 // マップ上の施設数をカウント
 map.forEach(row => {
     row.forEach(tile => {
-        if (tile.facility === 'gun') gunCount++;
+        if (tile.facility === 'gun') {
+            gunCount++;
+            if (tile.enhanced) enhancedGunCount++;
+        }
         else if (tile.facility === 'defenseFacility') defenseFacilityCount++;
         else if (tile.facility === 'port') portCount++;
     });
 });
 // 沈没していない軍艦（currentDurability > 0）の数をカウント
 const activeWarshipCount = warships.filter(ship => ship.currentDurability > 0).length;
-const facilityMaintenance = (gunCount * 600) + (defenseFacilityCount * 2000) + (portCount * 2500);
+const facilityMaintenance = (gunCount * 600) + (enhancedGunCount * 600) + (defenseFacilityCount * 2000) + (portCount * 2500);
 const warshipMaintenance = activeWarshipCount * 20000;
 let maintenanceCost = facilityMaintenance + warshipMaintenance;
 let maintenanceMultiplier = 1;
@@ -3023,7 +3133,7 @@ if (economicCrisisTurns > 0) {
 const actualMaintenanceCost = maintenanceCost * maintenanceMultiplier;
 if (actualMaintenanceCost > 0) {
     money -= actualMaintenanceCost;
-    let logMsg = `維持費 ${actualMaintenanceCost}G を資金から差し引きました。（砲台:${gunCount}、防衛施設:${defenseFacilityCount}、港:${portCount}、軍艦:${activeWarshipCount}）`;
+    let logMsg = `維持費 ${actualMaintenanceCost}G を資金から差し引きました。（砲台:${gunCount}（高効率:${enhancedGunCount}）、防衛施設:${defenseFacilityCount}、港:${portCount}、軍艦:${activeWarshipCount}）`;
     if (maintenanceMultiplier > 1) {
         logMsg += ` (経済危機により${maintenanceMultiplier}倍)`;
     }
