@@ -654,6 +654,7 @@ function loadGame() {
         logAction("ロードするセーブデータがありません。");
         return;
     }
+  const value = e.target.value.trim();
   if (value.startsWith('http://') || value.startsWith('https://')) {
             logAction("中身を取得中...");
             try {
