@@ -654,6 +654,7 @@ function loadGame() {
         logAction("ロードするセーブデータがありません。");
         return;
     }
+  inputArea.addEventListener('loadGame', async (e) => {
   const value = e.target.value.trim();
   if (value.startsWith('http://') || value.startsWith('https://')) {
             logAction("中身を取得中...");
@@ -671,6 +672,7 @@ function loadGame() {
                 statusText.textContent = "エラー: ファイルを取得できませんでした (CORS制限などの可能性があります)";
             }
         }
+  });
     try {
         // 新しいデコード方式
         const jsonString = decodeURIComponent(atob(encodedData));
