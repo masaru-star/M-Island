@@ -1810,7 +1810,7 @@ turn++;
   const otherIslandActionCode = document.getElementById('otherIslandActionInput').value;
   document.getElementById('otherIslandActionInput').value = ''; // 処理したらクリア
   if (otherIslandActionCode) {
-      if (otherIslandActionCode.trim() === KING_MONSTER_CODE) {
+      if (otherIslandActionCode === "KING_MONSTER") {
           spawnKingMonsterFromCode();
       } else {
       try {
