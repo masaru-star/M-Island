@@ -654,6 +654,22 @@ function loadGame() {
         logAction("ロードするセーブデータがありません。");
         return;
     }
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+            logAction("中身を取得中...");
+            try {
+                const response = await fetch(value);
+                if (!response.ok) {
+                    throw new Error('ネットワーク応答が正常ではありませんでした');
+                }
+                const data = await response.text();
+                // テキストボックスの中身をURLの内容に置き換え
+                inputArea.value = data;
+                statusText.textContent = "置換完了！";         
+            } catch (error) {
+                console.error('エラー:', error);
+                statusText.textContent = "エラー: ファイルを取得できませんでした (CORS制限などの可能性があります)";
+            }
+        }
     try {
         // 新しいデコード方式
         const jsonString = decodeURIComponent(atob(encodedData));
