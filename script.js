@@ -7,8 +7,11 @@ const MONSTER_TYPES = {
   5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 200000 },
   6: { name: '怪獣シルバガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 5000, defeatMoney: 5000000, condition: (pop, currentTurn) => pop >= 100000 && currentTurn >= 3000 },
   7: { name: '怪獣ゴルドガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 50000, defeatMoney: 50000000, condition: (pop, currentTurn) => pop >= 130000 && currentTurn >= 3000 },
-  8: { name: '怪獣プラチガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 500000, defeatMoney: 250000000, condition: (pop, currentTurn) => pop >= 150000 && currentTurn >= 3000 }
+  8: { name: '怪獣プラチガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 500000, defeatMoney: 250000000, condition: (pop, currentTurn) => pop >= 150000 && currentTurn >= 3000 },
+  9: { name: '怪獣キングガロス', minHP: 100, maxHP: 250, ability: 'kingMonster', moneyPerTurn: 0, defeatMoney: 0, condition: () => false }
 };
+const KING_MONSTER_TYPE_ID = 9;
+const KING_MONSTER_CODE = 'KING_MONSTER';
   const SIZE = 16;
   let money = 2500;
   let food = 1000;
@@ -267,6 +270,146 @@ function handleMonsterDefeat(monster, customMessage) {
         money += monsterType.defeatMoney;
         logAction(`${monsterType.name}の討伐報奨金として${monsterType.defeatMoney}Gを獲得しました！`);
     }
+    if (monster.typeId === KING_MONSTER_TYPE_ID) {
+        const rewardTable = { 100: 12, 200: 32, 250: 45 };
+        const kingDefeatPt = rewardTable[monster.spawnHp || monster.hp] || 0;
+        if (kingDefeatPt > 0) {
+            achievementPoints += kingDefeatPt;
+            logAction(`${monsterType.name}討伐により ${kingDefeatPt} 実績ptを獲得しました！`);
+        }
+    }
+}
+function isKingMonster(targetMonster) {
+    return targetMonster && targetMonster.typeId === KING_MONSTER_TYPE_ID;
+}
+function countHousesOnIsland() {
+    let houses = 0;
+    for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+            if (map[y][x].facility === 'house') houses++;
+        }
+    }
+    return houses;
+}
+function applyKingMonsterTileDestruction(x, y, actionLogPrefix) {
+    const tile = map[y][x];
+    const targetWarship = warships.find(ship => ship.x === x && ship.y === y && ship.currentDurability > 0 && !ship.isDispatched);
+    if (targetWarship) {
+        targetWarship.currentDurability -= 10;
+        targetWarship.abnormality = 'flooding';
+        checkAbnormalityOnDamage(targetWarship, 10);
+        logAction(`${actionLogPrefix} 軍艦 ${targetWarship.name} に10ダメージと浸水を与えました。`);
+        if (targetWarship.currentDurability <= 0) {
+            targetWarship.currentDurability = 0;
+            targetWarship.currentFuel = 0;
+            targetWarship.currentAmmo = 0;
+            logAction(`軍艦 ${targetWarship.name} はキングガロスの攻撃で撃沈しました。`);
+        }
+        return;
+    }
+    if (tile.facility === 'house') {
+        population -= tile.pop;
+        if (population < 0) population = 0;
+    }
+    if (tile.terrain === 'sea') {
+        tile.terrain = 'waste';
+    } else {
+        tile.terrain = 'waste';
+        tile.facility = null;
+        tile.pop = 0;
+        tile.enhanced = false;
+    }
+}
+function triggerMilitaryFacilitySelfDestruct(x, y, sourceName = '軍事施設') {
+    const tile = map[y] && map[y][x];
+    if (!tile || (tile.facility !== 'gun' && tile.facility !== 'defenseFacility')) return false;
+
+    tile.facility = null;
+    tile.terrain = 'sea';
+    tile.enhanced = false;
+    const bySourceText = sourceName ? `${sourceName}により` : '';
+    logAction(`(${x},${y}) の軍事施設が${bySourceText}自爆し、海になりました。`);
+
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) continue;
+
+            const targetWarship = warships.find(ship => ship.x === nx && ship.y === ny && ship.currentDurability > 0 && !ship.isDispatched);
+            if (targetWarship) {
+                const damage = Math.floor(Math.random() * 6) + 5;
+                targetWarship.currentDurability -= damage;
+                checkAbnormalityOnDamage(targetWarship, damage);
+                if (targetWarship.currentDurability <= 0) {
+                    targetWarship.currentDurability = 0;
+                    targetWarship.currentFuel = 0;
+                    targetWarship.currentAmmo = 0;
+                    logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受け撃沈しました！`);
+                } else {
+                    logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受けました。残り耐久: ${targetWarship.currentDurability}`);
+                }
+            }
+
+            const monsterHit = monsters.find(m => m.x === nx && m.y === ny);
+            if (monsterHit) {
+                const damage = Math.floor(Math.random() * 6) + 5;
+                monsterHit.hp -= damage;
+                const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
+                logAction(`自爆により ${monsterName} (${nx},${ny}) は${damage}のダメージを受けました。残り体力: ${monsterHit.hp}`);
+                if (monsterHit.hp <= 0) {
+                    handleMonsterDefeat(monsterHit, `${monsterName} は自爆に巻き込まれ討伐されました！`);
+                }
+            }
+        }
+    }
+
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE || (dx === 0 && dy === 0)) continue;
+            const affectedTile = map[ny][nx];
+            if (affectedTile.terrain !== 'sea') {
+                if (affectedTile.facility === 'house') {
+                    population -= affectedTile.pop;
+                    if (population < 0) population = 0;
+                }
+                affectedTile.terrain = 'waste';
+                affectedTile.facility = null;
+                affectedTile.pop = 0;
+                affectedTile.enhanced = false;
+                logAction(`(${nx},${ny}) が軍事施設自爆により荒地になりました。`);
+            }
+        }
+    }
+    return true;
+}
+function spawnKingMonsterFromCode() {
+    const spawnCandidates = [];
+    for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+            if (map[y][x].facility === 'house' && !monsters.find(m => m.x === x && m.y === y)) {
+                spawnCandidates.push({ x, y });
+            }
+        }
+    }
+    if (spawnCandidates.length === 0) {
+        logAction('キングガロスの出現候補となる住宅がありませんでした。');
+        return;
+    }
+    const spawn = spawnCandidates[Math.floor(Math.random() * spawnCandidates.length)];
+    const hpCandidates = [100, 200, 250];
+    const hp = hpCandidates[Math.floor(Math.random() * hpCandidates.length)];
+    monsters.push({ x: spawn.x, y: spawn.y, typeId: KING_MONSTER_TYPE_ID, hp, spawnHp: hp });
+    const spawnedTile = map[spawn.y][spawn.x];
+    population -= spawnedTile.pop;
+    if (population < 0) population = 0;
+    spawnedTile.terrain = 'waste';
+    spawnedTile.facility = null;
+    spawnedTile.pop = 0;
+    spawnedTile.enhanced = false;
+    logAction(`(${spawn.x},${spawn.y}) に 怪獣キングガロス (体力: ${hp}) が出現‼`);
 }
 function initMap() {
   map = Array.from({ length: SIZE }, (_, y) =>
@@ -1667,6 +1810,9 @@ turn++;
   const otherIslandActionCode = document.getElementById('otherIslandActionInput').value;
   document.getElementById('otherIslandActionInput').value = ''; // 処理したらクリア
   if (otherIslandActionCode) {
+      if (otherIslandActionCode.trim() === KING_MONSTER_CODE) {
+          spawnKingMonsterFromCode();
+      } else {
       try {
           const jsonString = decodeURIComponent(atob(otherIslandActionCode));
           const incomingAction = JSON.parse(jsonString);
@@ -1862,6 +2008,7 @@ turn++;
       } catch (e) {
           logAction("他島からの行動データの復元に失敗しました。");
           console.error(e);
+      }
       }
   }
 
@@ -2345,68 +2492,7 @@ const newWarship = {
       }
     }
     else if (action === 'selfDestructMilitaryFacility') { // 名称変更
-        if (tile && (tile.facility === 'gun' || tile.facility === 'defenseFacility')) { // ハリボテ施設を削除
-            tile.facility = null;
-            tile.terrain = 'sea';
-            tile.enhanced = false; // 強化状態もリセット
-            logAction(`(${x},${y}) の軍事施設が自爆し、海になりました。`);
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    const nx = x + dx;
-                    const ny = y + dy;
-
-                    if (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE) {
-                        const targetWarship = warships.find(ship => ship.x === nx && ship.y === ny);
-                        
-                        // 存在する軍艦で、かつ沈没状態ではない、かつ派遣中ではない（自島にいる）場合
-                        if (targetWarship && targetWarship.currentDurability > 0 && !targetWarship.isDispatched) {
-                            // 5から10のランダムなダメージを生成 (Math.floor(Math.random() * 6) + 5)
-                            const damage = Math.floor(Math.random() * 6) + 5;                           
-                            targetWarship.currentDurability -= damage;
-                            checkAbnormalityOnDamage(targetWarship, damage);
-                            if (targetWarship.currentDurability <= 0) {
-                                targetWarship.currentDurability = 0;
-                                targetWarship.currentFuel = 0; // 沈没したら燃料0
-                                targetWarship.currentAmmo = 0; // 沈没したら弾薬0
-                                logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受け撃沈しました！`);
-                            } else {
-                                logAction(`自爆により軍艦 ${targetWarship.name} (${nx},${ny}) は${damage}のダメージを受けました。残り耐久: ${targetWarship.currentDurability}`);
-                        const monsterHit = monsters.find(m => m.x === nx && m.y === ny);
-                            }
-                        if (monsterHit) {
-                            const damage = Math.floor(Math.random() * 6) + 5; // 5～10ダメージ
-                            monsterHit.hp -= damage;
-                            const monsterName = MONSTER_TYPES[monsterHit.typeId] ? MONSTER_TYPES[monsterHit.typeId].name : '怪獣';
-                            logAction(`自爆により ${monsterName} (${nx},${ny}) は${damage}のダメージを受けました。残り体力: ${monsterHit.hp}`);
-                            if (monsterHit.hp <= 0) {
-                                handleMonsterDefeat(monsterHit, `${monsterName} は自爆に巻き込まれ討伐されました！`);
-                            }
-                        }
-                    }
-                }
-            }            }
-            // 周囲1マスを荒地にする
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    const nx = x + dx;
-                    const ny = y + dy;
-                    if (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE && !(dx === 0 && dy === 0)) {
-                        const affectedTile = map[ny][nx];
-                        if (affectedTile.terrain !== 'sea') { // 海以外の地形を荒地にする
-                            if (affectedTile.facility === 'house') {
-                                population -= affectedTile.pop;
-                                if (population < 0) population = 0;
-                            }
-                            affectedTile.terrain = 'waste';
-                            affectedTile.facility = null;
-                            affectedTile.pop = 0;
-                            affectedTile.enhanced = false; // 強化状態もリセット
-                            logAction(`(${nx},${ny}) が軍事施設自爆により荒地になりました。`);
-                        }
-                    }
-                }
-            }
-        } else {
+        if (!triggerMilitaryFacilitySelfDestruct(x, y, '')) {
             logAction(`(${x},${y}) に軍事施設がありませんでした。`);
         }
     }
@@ -2677,8 +2763,23 @@ if (remainingOilRigCount > 0 || totalOilRigIncome > 0) {
             logAction(`噴火による降灰はあと ${volcanoTurns} ターン続きます...`);
         }
     }
+    const hasKingMonster = monsters.some(isKingMonster);
+    if (hasKingMonster) {
+        const volunteerMoney = countHousesOnIsland() * 50000;
+        if (volunteerMoney > 0) {
+            money += volunteerMoney;
+            moneyChange += volunteerMoney;
+            logAction(`怪獣キングガロスの影響で義勇金 ${volunteerMoney}G が支給されました。`);
+        }
+        if (economicCrisisTurns > 0) {
+            money += frozenMoney;
+            frozenMoney = 0;
+            economicCrisisTurns = 0;
+            logAction('怪獣キングガロスの影響で経済危機が強制的に終息しました。');
+        }
+    }
 // 経済危機の発生判定
-    if (economicCrisisTurns === 0 && (money + frozenMoney) >= 100000000) {
+    if (!hasKingMonster && economicCrisisTurns === 0 && (money + frozenMoney) >= 100000000) {
         const baseMoney = 1500000000;
         const currentTotalMoney = money + frozenMoney;
         const excessMoney = Math.max(0, currentTotalMoney - baseMoney); // 0未満にならないように    
@@ -2697,7 +2798,7 @@ if (remainingOilRigCount > 0 || totalOilRigIncome > 0) {
         }
     } 
     // 経済危機の持続処理
-    else if (economicCrisisTurns > 0) {
+    else if (!hasKingMonster && economicCrisisTurns > 0) {
         economicCrisisTurns--;
         if (economicCrisisTurns === 0) {
             logAction(`経済危機が終息しました。凍結されていた ${frozenMoney}G が使用可能になります。`);
@@ -2959,6 +3060,8 @@ if (turn >= 1000 && Math.random() < 0.001) { // 0.1% = 0.001
           if (moveCount > 0) {
               logAction(`${monsterType.name} は ${moveCount} 回移動する！`);
           }
+      } else if (monsterType.ability === 'kingMonster') {
+          moveCount = 0;
       }
 
       for (let i = 0; i < moveCount; i++) {
@@ -3104,6 +3207,126 @@ if (turn >= 1000 && Math.random() < 0.001) { // 0.1% = 0.001
               tile.enhanced = false;
           }
       }
+      else if (monsterType.ability === 'kingMonster') {
+          const kingAction = Math.floor(Math.random() * 6) + 1;
+          if (kingAction === 1) {
+              const militaryTiles = [];
+              for (let yy = 0; yy < SIZE; yy++) {
+                  for (let xx = 0; xx < SIZE; xx++) {
+                      if (map[yy][xx].facility === 'gun' || map[yy][xx].facility === 'defenseFacility') {
+                          militaryTiles.push({ x: xx, y: yy });
+                      }
+                  }
+              }
+              if (militaryTiles.length > 0) {
+                  const first = militaryTiles[Math.floor(Math.random() * militaryTiles.length)];
+                  const queue = [first];
+                  const visited = new Set();
+                  while (queue.length > 0) {
+                      const current = queue.shift();
+                      const key = `${current.x},${current.y}`;
+                      if (visited.has(key)) continue;
+                      visited.add(key);
+                      const chainedTargets = [];
+                      for (let dx = -1; dx <= 1; dx++) {
+                          for (let dy = -1; dy <= 1; dy++) {
+                              const nx = current.x + dx;
+                              const ny = current.y + dy;
+                              if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) continue;
+                              if (map[ny][nx].facility === 'gun' || map[ny][nx].facility === 'defenseFacility') {
+                                  chainedTargets.push({ x: nx, y: ny });
+                              }
+                          }
+                      }
+                      triggerMilitaryFacilitySelfDestruct(current.x, current.y, `${monsterType.name}の能力`);
+                      queue.push(...chainedTargets);
+                  }
+              } else {
+                  logAction(`${monsterType.name} は軍事施設自爆を試みましたが、対象がありませんでした。`);
+              }
+          } else if (kingAction === 2) {
+              const directions = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+              const dir = directions[Math.floor(Math.random() * directions.length)];
+              let nx = monster.x + dir.dx;
+              let ny = monster.y + dir.dy;
+              while (nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE) {
+                  applyKingMonsterTileDestruction(nx, ny, `${monsterType.name}が直進破壊: (${nx},${ny})`);
+                  monster.x = nx;
+                  monster.y = ny;
+                  nx += dir.dx;
+                  ny += dir.dy;
+              }
+              logAction(`${monsterType.name} は限界まで直進しました。`);
+          } else if (kingAction === 3) {
+              logAction(`${monsterType.name} が地震/津波を発生させた！`);
+              earthquakeEffect([{ x: monster.x, y: monster.y }]);
+          } else if (kingAction === 4) {
+              const steps = Math.floor(Math.random() * 21) + 5;
+              const directions = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+              for (let s = 0; s < steps; s++) {
+                  const dir = directions[Math.floor(Math.random() * directions.length)];
+                  const nx = monster.x + dir.dx;
+                  const ny = monster.y + dir.dy;
+                  if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) continue;
+                  applyKingMonsterTileDestruction(nx, ny, `${monsterType.name}が移動破壊: (${nx},${ny})`);
+                  monster.x = nx;
+                  monster.y = ny;
+              }
+              logAction(`${monsterType.name} はランダムに ${steps} マス移動しました。`);
+          } else if (kingAction === 5) {
+              const adjacentWarships = warships.filter(ship =>
+                  ship.currentDurability > 0 &&
+                  !ship.isDispatched &&
+                  Math.max(Math.abs(ship.x - monster.x), Math.abs(ship.y - monster.y)) === 1
+              );
+              if (adjacentWarships.length > 0) {
+                  const target = adjacentWarships[Math.floor(Math.random() * adjacentWarships.length)];
+                  const useRoar = Math.random() < 0.5;
+                  const damage = useRoar ? 14 : 21;
+                  target.currentDurability -= damage;
+                  checkAbnormalityOnDamage(target, damage);
+                  logAction(`${monsterType.name}の${useRoar ? '咆哮' : '巨大な拳'}！軍艦 ${target.name} に ${damage} ダメージ。`);
+                  if (target.currentDurability <= 0) {
+                      target.currentDurability = 0;
+                      target.currentFuel = 0;
+                      target.currentAmmo = 0;
+                      logAction(`軍艦 ${target.name} は${monsterType.name}の攻撃で撃沈しました。`);
+                  }
+              } else {
+                  logAction(`${monsterType.name} は隣接する軍艦を探したが見つからなかった。`);
+              }
+          } else if (kingAction === 6) {
+              for (let yy = 0; yy < SIZE; yy++) {
+                  if (yy === monster.y) continue;
+                  const tile = map[yy][monster.x];
+                  if (tile.terrain !== 'sea') {
+                      if (tile.facility === 'house') {
+                          population -= tile.pop;
+                          if (population < 0) population = 0;
+                      }
+                      tile.terrain = 'waste';
+                      tile.facility = null;
+                      tile.pop = 0;
+                      tile.enhanced = false;
+                  }
+              }
+              for (let xx = 0; xx < SIZE; xx++) {
+                  if (xx === monster.x) continue;
+                  const tile = map[monster.y][xx];
+                  if (tile.terrain !== 'sea') {
+                      if (tile.facility === 'house') {
+                          population -= tile.pop;
+                          if (population < 0) population = 0;
+                      }
+                      tile.terrain = 'waste';
+                      tile.facility = null;
+                      tile.pop = 0;
+                      tile.enhanced = false;
+                  }
+              }
+              logAction(`${monsterType.name} の衝撃で縦横の陸地が荒地化しました。`);
+          }
+      }
   }
 
 let gunCount = 0;
@@ -3156,7 +3379,8 @@ if (actualMaintenanceCost > 0) {
  * 1. 地震効果 (ランダムな陸地タイル5〜12個の荒地化)
  * 2. 津波効果 (沿岸タイルの荒地化/海化、港・油田の破壊、軍艦へのダメージ)
  */
-function earthquakeEffect() {
+function earthquakeEffect(excludedCoords = []) {
+    const excludedSet = new Set((excludedCoords || []).map(c => `${c.x},${c.y}`));
     // ------------------------------------
     // 1. 地震効果 (陸地タイルの荒地化)
     // ------------------------------------
@@ -3165,7 +3389,7 @@ function earthquakeEffect() {
         for (let x = 0; x < SIZE; x++) {
             const tile = map[y][x];
             // 陸地タイルかつ石碑ではないことを確認
-            if (tile.terrain !== 'sea' && tile.facility !== 'Monument') {
+            if (tile.terrain !== 'sea' && tile.facility !== 'Monument' && !excludedSet.has(`${x},${y}`)) {
                 affectedTiles.push({ x, y });
             }
         }
@@ -3210,6 +3434,7 @@ function earthquakeEffect() {
     for (let y = 0; y < SIZE; y++) {
         for (let x = 0; x < SIZE; x++) {
             const tile = map[y][x];
+            if (excludedSet.has(`${x},${y}`)) continue;
             if (tile.facility === 'Monument') continue; // 石碑は例外
 
             // 海または最外周に隣接する陸地タイルかどうかを判定する
