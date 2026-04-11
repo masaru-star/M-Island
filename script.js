@@ -1,13 +1,13 @@
 let monster = null;
 const MONSTER_TYPES = {
-  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 60000 },
+  1: { name: '怪獣シマオロシ', minHP: 1, maxHP: 1, ability: null, moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 100000 },
   2: { name: '怪獣ヴォルカガロス', minHP: 2, maxHP: 4, ability: 'destroyArea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 120000 },
   3: { name: '怪獣アエロガロス', minHP: 3, maxHP: 3, ability: 'multiMove', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 120000 },
   4: { name: '怪獣テラガロス', minHP: 5, maxHP: 5, ability: 'landfillSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 150000 },
-  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 150000 },
-  6: { name: 'シルバガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 5000, defeatMoney: 5000000, condition: (pop, currentTurn) => pop >= 100000 && currentTurn >= 3000 },
-  7: { name: 'ゴルドガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 50000, defeatMoney: 50000000, condition: (pop, currentTurn) => pop >= 130000 && currentTurn >= 3000 },
-  8: { name: 'プラチガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 500000, defeatMoney: 250000000, condition: (pop, currentTurn) => pop >= 150000 && currentTurn >= 3000 }
+  5: { name: '怪獣アクアガロス', minHP: 3, maxHP: 5, ability: 'createSea', moneyPerTurn: 0, defeatMoney: 0, condition: (pop, currentTurn) => pop >= 200000 },
+  6: { name: '怪獣シルバガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 5000, defeatMoney: 5000000, condition: (pop, currentTurn) => pop >= 100000 && currentTurn >= 3000 },
+  7: { name: '怪獣ゴルドガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 50000, defeatMoney: 50000000, condition: (pop, currentTurn) => pop >= 130000 && currentTurn >= 3000 },
+  8: { name: '怪獣プラチガロス', minHP: 2, maxHP: 2, ability: null, moneyPerTurn: 500000, defeatMoney: 250000000, condition: (pop, currentTurn) => pop >= 150000 && currentTurn >= 3000 }
 };
   const SIZE = 16;
   let money = 2500;
