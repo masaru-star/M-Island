@@ -1,0 +1,77 @@
+<svg width="400" height="500" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+    <!-- Definitions for gradients and shadows -->
+    <defs>
+        <!-- 金色のグラデーション（光沢感） -->
+        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+            <stop offset="25%" style="stop-color:#FFFACD;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#FFC800;stop-opacity:1" />
+            <stop offset="75%" style="stop-color:#D4AF37;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+        </linearGradient>
+        <!-- 深みのある金色のベースカラー -->
+        <linearGradient id="darkGold" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#B8860B;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#785A00;stop-opacity:1" />
+        </linearGradient>
+        <!-- リボンのグラデーション（深緑のまま、ストライプを金に合わせる） -->
+        <linearGradient id="ribbonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#0b2b0b;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#1e4d2b;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#0b2b0b;stop-opacity:1" />
+        </linearGradient>
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+            <feOffset dx="2" dy="4" result="offsetblur" />
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.5" />
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+
+    <!-- Ribbon -->
+    <g filter="url(#dropShadow)">
+        <path d="M120 20 L280 20 L280 180 L200 220 L120 180 Z" fill="url(#ribbonGradient)" stroke="#785A00" stroke-width="2" />
+        <!-- Ribbon Stripes (Gold colored now) -->
+        <rect x="155" y="20" width="10" height="175" fill="#FFD700" opacity="0.6" />
+        <rect x="235" y="20" width="10" height="175" fill="#FFD700" opacity="0.6" />
+    </g>
+
+    <!-- Medal Main Body -->
+    <g transform="translate(200, 320)" filter="url(#dropShadow)">
+        <!-- Outer Star/Cog Shape -->
+        <path d="M0 -110 L25 -80 L65 -90 L60 -50 L100 -30 L80 10 L100 50 L60 70 L65 110 L25 100 L0 130 L-25 100 L-65 110 L-60 70 L-100 50 L-80 10 L-100 -30 L-60 -50 L-65 -90 L-25 -80 Z" 
+              fill="url(#darkGold)" stroke="#D4AF37" stroke-width="3" />
+        
+        <!-- Main Armor Plate (Octagon) -->
+        <path d="M-60 -60 L60 -60 L90 -30 L90 30 L60 60 L-60 60 L-90 30 L-90 -30 Z" 
+              fill="url(#goldGradient)" stroke="#785A00" stroke-width="4" />
+        
+        <!-- Inner Plate with Highlight -->
+        <path d="M-50 -50 L50 -50 L80 -20 L80 20 L50 50 L-50 50 L-80 20 L-80 -20 Z" 
+              fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.4" />
+
+        <!-- Rivets -->
+        <circle cx="-50" cy="-50" r="5" fill="#4B3D00" />
+        <circle cx="50" cy="-50" r="5" fill="#4B3D00" />
+        <circle cx="80" cy="-20" r="5" fill="#4B3D00" />
+        <circle cx="80" cy="20" r="5" fill="#4B3D00" />
+        <circle cx="50" cy="50" r="5" fill="#4B3D00" />
+        <circle cx="-50" cy="50" r="5" fill="#4B3D00" />
+        <circle cx="-80" cy="20" r="5" fill="#4B3D00" />
+        <circle cx="-80" cy="-20" r="5" fill="#4B3D00" />
+
+        <!-- Center Emblem (Fortress Shield) -->
+        <path d="M-30 -35 L30 -35 L30 15 C30 35 0 45 0 45 C0 45 -30 35 -30 15 Z" 
+              fill="#785A00" stroke="#FFD700" stroke-width="2" />
+        
+        <!-- Shield Details (Horizontal Bars) -->
+        <line x1="-20" y1="-15" x2="20" y2="-15" stroke="#FFD700" stroke-width="4" stroke-linecap="round" />
+        <line x1="-20" y1="0" x2="20" y2="0" stroke="#FFD700" stroke-width="4" stroke-linecap="round" />
+        <line x1="-15" y1="15" x2="15" y2="15" stroke="#FFD700" stroke-width="4" stroke-linecap="round" />
+    </g>
+</svg>
