@@ -1,0 +1,68 @@
+<svg width="400" height="500" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 銅色のグラデーション -->
+    <linearGradient id="bronzeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#b87333;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#df8e44;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b4513;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- リボン用グラデーション -->
+    <linearGradient id="ribbonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4a1e0a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a1e0a;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- 立体感を出すためのシャドウ -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+      <feOffset dx="2" dy="2" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- リボン部分 -->
+  <path d="M120,50 L280,50 L260,180 L140,180 Z" fill="url(#ribbonGradient)" stroke="#5d2906" stroke-width="2" />
+  <rect x="120" y="50" width="160" height="20" fill="#3a1a08" />
+  
+  <!-- 接続リング -->
+  <circle cx="200" cy="185" r="15" fill="none" stroke="url(#bronzeGradient)" stroke-width="5" />
+
+  <!-- メダル本体（外縁・星型） -->
+  <g filter="url(#shadow)">
+    <!-- 8角の星型ベース -->
+    <path d="M200,180 L225,240 L290,240 L240,285 L260,350 L200,310 L140,350 L160,285 L110,240 L175,240 Z" 
+          fill="url(#bronzeGradient)" stroke="#5d2906" stroke-width="2" />
+    
+    <!-- 円形の中枠 -->
+    <circle cx="200" cy="275" r="70" fill="url(#bronzeGradient)" stroke="#5d2906" stroke-width="2" />
+    <circle cx="200" cy="275" r="62" fill="none" stroke="#5d2906" stroke-width="1" stroke-dasharray="4,2" />
+
+    <!-- シンボル：荒波と盾 -->
+    <!-- 波の表現 -->
+    <path d="M150,290 Q175,260 200,290 T250,290" fill="none" stroke="#3a1a08" stroke-width="4" stroke-linecap="round" />
+    <path d="M155,305 Q180,275 205,305 T245,305" fill="none" stroke="#3a1a08" stroke-width="3" stroke-linecap="round" />
+    
+    <!-- 回避を象徴する矢印（盾の後ろを抜ける軌跡） -->
+    <path d="M160,240 Q200,210 240,240" fill="none" stroke="#3a1a08" stroke-width="5" stroke-linecap="round" />
+    <path d="M235,230 L245,245 L230,245 Z" fill="#3a1a08" />
+
+    <!-- 盾のエンブレム -->
+    <path d="M185,245 L215,245 L215,275 Q200,290 185,275 Z" fill="#b87333" stroke="#3a1a08" stroke-width="2" />
+    
+    <!-- 錨（海軍の象徴） -->
+    <path d="M200,250 L200,275 M190,265 L210,265 M190,275 Q200,285 210,275" fill="none" stroke="#3a1a08" stroke-width="2" stroke-linecap="round" />
+  </g>
+
+  <!-- 刻印テキスト（円周状に見えるように配置） -->
+  <text x="200" y="380" font-family="Serif" font-size="14" fill="#3a1a08" text-anchor="middle" font-weight="bold">NAVY SURVIVOR</text>
+  <text x="200" y="395" font-family="Serif" font-size="10" fill="#3a1a08" text-anchor="middle">CRISIS EVASION</text>
+
+</svg>
