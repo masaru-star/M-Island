@@ -114,6 +114,9 @@ SOFTWARE. -->
   <option value="refuelWarship" data-myisland="true">燃料補給</option>
   <option value="resupplyWarshipAmmo" data-myisland="true">弾薬補給</option>
   <option value="repairWarship" data-myisland="true">軍艦修理</option>
+  <option value="setWarshipNickname" data-myisland="true">二つ名指定 (100000G)</option>
+  <option value="convertAchievementToExp" data-myisland="true">実績pt変換</option>
+  <option value="remodelWarshipWeapon" data-myisland="true">武器換装</option>
   <option value="enhanceWarship" data-myisland="true">軍艦増強</option>
   <option value="decommissionWarship" data-myisland="true">軍艦除籍</option>
   <option value="dispatchWarship" data-myisland="true">軍艦派遣</option>
@@ -130,6 +133,12 @@ SOFTWARE. -->
 <input type="number" id="refuelAmount" placeholder="補給数" min="1" style="width: 60px; display: none;">
 <input type="number" id="resupplyAmmoAmount" placeholder="補給数" min="1" style="width: 60px; display: none;">
 <input type="number" id="repairAmount" placeholder="回復耐久値" min="1" style="width: 90px; display: none;">
+<input type="text" id="warshipNicknameInput" placeholder="二つ名(10文字以内)" maxlength="10" style="width: 150px; display: none;">
+<input type="number" id="achievementConvertAmount" placeholder="消費Pt" min="1" style="width: 70px; display: none;">
+<select id="weaponRemodelType" style="display: none;">
+  <option value="mainGun">主砲+1</option>
+  <option value="torpedo">魚雷+1</option>
+</select>
 <input type="number" id="oilDrillFactor" placeholder="発掘率(任意)" min="1" max="10" value="" style="width: 90px; display: none;">
 <input type="text" id="touristCodeInput" placeholder="観光者コードを入力" style="width: 250px; display: none;">
 <div id="warshipBuildInputs">
