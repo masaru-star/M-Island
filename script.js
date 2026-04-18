@@ -29,6 +29,8 @@ const KING_MONSTER_CODE = 'KING_MONSTER';
   let economicCrisisTurns = 0; // 経済危機の残りターン数
   let frozenMoney = 0; // 経済危機による凍結資金
   let volcanoTurns = 0; // 火山の噴火 残りターン数
+  let trackedFundingFailure = null; // 資金不足で失敗した計画の追跡情報
+  let currentExecutingTask = null; // 実行中計画（失敗追跡用）
 
   // 軍艦の色変化条件
   const WARSHIP_CAPS = {
@@ -296,6 +298,93 @@ function getBombardTypeLabel(action) {
     if (action === 'ppBombard') return 'PP弾砲撃';
     if (action === 'randomBombard') return 'ランダム弾砲撃';
     return '砲撃';
+}
+function getRequiredMoneyForTask(task) {
+    if (!task || !task.action) return 0;
+    const action = task.action;
+    if (action === 'buildFarm' || action === 'buildFactory') return 100;
+    if (action === 'enhanceFacility') return 10000;
+    if (action === 'buildPort') return 3000;
+    if (action === 'buildGun') return 1200;
+    if (action === 'buildDefenseFacility') return 5000;
+    if (action === 'flatten') return 20;
+    if (action === 'landfill') return 600;
+    if (action === 'dig') {
+        const factor = task.oilFactor ? Math.max(1, Number(task.oilFactor)) : 1;
+        return 300 * factor ** 2;
+    }
+    if (action === 'plantForest') return 200;
+    if (action === 'bombard') return 120 * (task.count || 1);
+    if (action === 'spreadBombard') return 500 * (task.count || 1);
+    if (action === 'ppBombard') return 10000000 * (task.count || 1);
+    if (action === 'randomBombard') return 500000 * (task.count || 1);
+    if (action === 'buildMonument' || action === 'upgradeMonument') return 500000000;
+    if (action === 'setWarshipNickname') return 100000;
+    if (action === 'buildWarship') return Number(task?.warshipData?.originalCost || 0);
+    if (action === 'resupplyWarshipAmmo') return 1000 * (task.amount || 1);
+    if (action === 'repairWarship') return 100000 * (task.amount || 1);
+    return 0;
+}
+function getEconomicCrisisRiskInfo() {
+    const currentTotalMoney = money + frozenMoney;
+    const threshold = 100000000;
+    const baseMoney = 1500000000;
+    if (economicCrisisTurns > 0) {
+        return { probability: 100, shortage: 0, crisisActive: true };
+    }
+    if (currentTotalMoney < threshold) {
+        return { probability: 0, shortage: threshold - currentTotalMoney, crisisActive: false };
+    }
+    const excessMoney = Math.max(0, currentTotalMoney - baseMoney);
+    const baseProbability = 0.01;
+    const additionalProbability = Math.floor(excessMoney / 100000000) * 0.002;
+    const totalProbability = Math.min(1, baseProbability + additionalProbability);
+    return { probability: totalProbability * 100, shortage: 0, crisisActive: false };
+}
+function updateLogStatusLines() {
+    const line1 = document.getElementById('logStatusLine1');
+    const line2 = document.getElementById('logStatusLine2');
+    if (!line1 || !line2) return;
+    const crisisInfo = getEconomicCrisisRiskInfo();
+    if (crisisInfo.crisisActive) {
+        line1.textContent = `経済危機進行中: 発生確率 100% (残り ${economicCrisisTurns}ターン)`;
+    } else if (crisisInfo.probability <= 0) {
+        line1.textContent = `経済危機発生確率: 0% / 可能性が出るまであと ${crisisInfo.shortage}G 以上`;
+    } else {
+        line1.textContent = `現在の経済危機発生確率: ${crisisInfo.probability.toFixed(1)}%`;
+    }
+    line1.className = 'log-status-danger';
+
+    if (!trackedFundingFailure) {
+        line2.textContent = '資金不足による計画失敗トラッキング: なし';
+        line2.className = 'log-status-muted';
+        return;
+    }
+    const { planLabel, targetMoney } = trackedFundingFailure;
+    const currentMoney = trackedFundingFailure.currentMoney ?? money;
+    const progress = targetMoney > 0 ? Math.min(100, (currentMoney / targetMoney) * 100) : 100;
+    const achieved = currentMoney >= targetMoney;
+    if (achieved) {
+        line2.textContent = `資金不足トラッキング: 「${planLabel}」は達成済みです (目標 ${targetMoney}G / 現在 ${currentMoney}G / 達成率 ${progress.toFixed(1)}%)`;
+        line2.className = 'log-status-info';
+    } else {
+        line2.textContent = `資金不足トラッキング: 「${planLabel}」 目標 ${targetMoney}G / 現在 ${currentMoney}G / 達成率 ${progress.toFixed(1)}%`;
+        line2.className = 'log-status-danger';
+    }
+}
+function setFundingFailureTrackingFromTask(task) {
+    if (!task) return;
+    const pinTracking = document.getElementById('pinFundingFailureTracking')?.checked;
+    if (pinTracking && trackedFundingFailure) return;
+    const targetMoney = getRequiredMoneyForTask(task);
+    if (targetMoney <= 0) return;
+    const { name, coord } = getActionName(task.action, task.x, task.y, task);
+    trackedFundingFailure = {
+        action: task.action,
+        planLabel: `${coord} ${name}`.trim(),
+        targetMoney
+    };
+    updateLogStatusLines();
 }
 
 // 計画キューの表示を更新する関数
@@ -634,6 +723,10 @@ const moneyElement = document.getElementById('money');
   document.getElementById('money').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
   document.getElementById('food').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
   document.getElementById('population').style.visibility = isViewingOtherIsland ? 'hidden' : 'visible';
+  if (trackedFundingFailure) {
+      trackedFundingFailure.currentMoney = money;
+  }
+  updateLogStatusLines();
 }
 
 // confirmButtonの表示/非表示を更新する関数
@@ -853,10 +946,21 @@ function selectTile(x, y) {
   selectedY = y;
   renderMap();
 }
+window.clearTileSelection = function() {
+  selectedX = null;
+  selectedY = null;
+  document.getElementById('tileInfo').textContent = '';
+  renderMap();
+}
+window.clearFundingFailureTracking = function() {
+    trackedFundingFailure = null;
+    updateLogStatusLines();
+}
 
 // logAction関数を修正して、メッセージに基づいて色を適用
 function logAction(msg, options = {}) {
   const log = document.getElementById('log');
+  const statusLine2 = document.getElementById('logStatusLine2');
   const entry = document.createElement('div');
   entry.textContent = `[ターン${turn}] ${msg}`;
   if (options.subtle) {
@@ -866,7 +970,15 @@ function logAction(msg, options = {}) {
   } else if (msg.includes('建設') || msg.includes('形成') || msg.includes('討伐') || msg.includes('初期化') || msg.includes('強化') || msg.includes('補給') || msg.includes('移動しました') || msg.includes('派遣') || msg.includes('帰還') || msg.includes('要請') || msg.includes('修理')) { // 修理を追加
     entry.classList.add('log-cyan');
   }
-  log.prepend(entry);
+  if (statusLine2 && statusLine2.parentNode === log) {
+    statusLine2.insertAdjacentElement('afterend', entry);
+  } else {
+    log.prepend(entry);
+  }
+  if (currentExecutingTask && msg.includes('失敗') && msg.includes('資金不足')) {
+    setFundingFailureTrackingFromTask(currentExecutingTask);
+  }
+  updateLogStatusLines();
   if (!options.skipWhisper) {
     maybeLogResidentWhisper(msg);
   }
@@ -2268,7 +2380,8 @@ for (let i = 0; i < ACTIONS_PER_TURN; i++) {
         break; // キューが空になったら終了
     }
     // actionQueue.shift() により、実行した計画はキューから削除される（残りは保持される）
-    const task = actionQueue.shift(); 
+    const task = actionQueue.shift();
+    currentExecutingTask = task;
     const x = task.x;
     const y = task.y;
     const action = task.action;
@@ -3041,6 +3154,7 @@ if (remainingOilRigCount > 0 || totalOilRigIncome > 0) {
     }
   }
 
+  currentExecutingTask = null;
   population += currentTurnPopulationGrowth; // 合計の人口増加分を反映
   checkAndCompleteMission('07', 2, 1000, 0, () => population >= 50000, '総人口が5万人に達する');
   foodChange -= Math.floor(population / 200) * 5;
