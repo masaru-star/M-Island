@@ -45,6 +45,18 @@ td {
   .log-whisper {
     color: rgba(0, 0, 0, 0.35);
   }
+  #logStatusLine1, #logStatusLine2 {
+    font-weight: bold;
+  }
+  .log-status-danger {
+    color: #8b0000;
+  }
+  .log-status-info {
+    color: #0b4fa3;
+  }
+  .log-status-muted {
+    color: #666;
+  }
   .warship-medal {
     width: 1em;
     height: 1em;

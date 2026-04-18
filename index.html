@@ -77,6 +77,9 @@ SOFTWARE. -->
 <div style="margin-top: 2px;">
     <input type="checkbox" id="keepOptionSelected">
     <label for="keepOptionSelected">オプションを先頭に戻さない</label>
+    <button onclick="clearFundingFailureTracking()" style="margin-left: 8px;">トラッキング解除</button>
+    <input type="checkbox" id="pinFundingFailureTracking" style="margin-left: 8px;">
+    <label for="pinFundingFailureTracking">トラッキングを固定</label>
 </div>
 <button onclick="nextTurn()">▶ ターンを進める</button>
 <br>
@@ -177,6 +180,7 @@ SOFTWARE. -->
     </div>
 </div>
 <button onclick="confirmAction()" id="confirmBtn" disabled>決定</button>
+<button onclick="clearTileSelection()">タイル選択の解除</button>
 <span id="tileInfo"></span>
 <div id="gameContainer" style="display: flex; gap: 5px;">
     <table id="map"></table>
@@ -184,7 +188,10 @@ SOFTWARE. -->
       <h4>計画キュー</h4><ul id="actionQueueList" style="list-style-type: none; padding: 0;"></ul>設定した計画はクリックで撤回可能です。
     </div>
 </div>
-<div id="log" style="margin-top:1em;"></div>
+<div id="log" style="margin-top:1em;">
+  <div id="logStatusLine1"></div>
+  <div id="logStatusLine2"></div>
+</div>
 <script src="script.js"></script>
 <script>
   const openBtn = document.getElementById('openBtn');
