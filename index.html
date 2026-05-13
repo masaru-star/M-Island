@@ -40,9 +40,23 @@ SOFTWARE. -->
     ロードする際は、保存したデータを上記のテキストエリアに貼り付けてから「ロード」ボタンを押してください。
   </p>
 </div>
-<button id="openBtn">貢献者の一覧/ソースコード</button>
+<button id="openBtn">諸設定/貢献者の一覧/ソースコード</button>
 <div id="modalOverlay" class="overlay">
   <div class="modal-content">
+    <h2>諸設定</h2>
+    <p class="settings-note">この諸設定は現在開いている画面でのみ有効です。ブラウザストレージには保存しません。</p>
+    <div id="settingsList" class="settings-list">
+      <label><input type="checkbox" id="settingShowClearTileSelection">「タイル選択の解除」ボタンを表示する</label>
+      <label><input type="checkbox" id="settingShowKeepOptionSelected" checked>「オプションを先頭に戻さない」チェックボックスを表示する</label>
+      <label><input type="checkbox" id="settingShowFundingTrackingControls">「トラッキング解除」「トラッキングを固定」を表示する</label>
+      <label><input type="checkbox" id="settingShowEconomicCrisisRate">「経済危機発生率」を表示する</label>
+      <label><input type="checkbox" id="settingEnablePlanTracking">「計画トラッキング」を実行し、表示する</label>
+      <label><input type="checkbox" id="settingEnhanceWarshipToExpLimit">軍艦増強を実行したとき、経験値の限界まで実行する</label>
+      <label><input type="checkbox" id="settingAutoBombardCountToGuns">砲撃数を選択したとき入力される値は常に可能台数に合わせる</label>
+      <label><input type="checkbox" id="settingAutoExportFoodMax">食料輸出を選択したとき入力される値は常に限界値にする</label>
+      <label><input type="checkbox" id="settingAutoSupplyMax">燃料および弾薬補給を選択したとき入力される値は常に限界値にする</label>
+    </div>
+    <hr>
     <h2>List of contributors</h2>
         <p>本作は「箱庭諸島」のリスペクト作品です。<br>This work is a tribute to "箱庭諸島".<br><br>
         Original Inspired by: 徳岡宏樹（箱庭諸島）<br>
@@ -75,11 +89,15 @@ SOFTWARE. -->
     <input type="text" id="actionForOtherIslandOutput" style="width: 400px; margin-bottom: 5px;" readonly>
 </div>
 <div style="margin-top: 2px;">
-    <input type="checkbox" id="keepOptionSelected">
-    <label for="keepOptionSelected">オプションを先頭に戻さない</label>
-    <button onclick="clearFundingFailureTracking()" style="margin-left: 8px;">トラッキング解除</button>
-    <input type="checkbox" id="pinFundingFailureTracking" style="margin-left: 8px;">
-    <label for="pinFundingFailureTracking">トラッキングを固定</label>
+    <span id="keepOptionSettingControl">
+      <input type="checkbox" id="keepOptionSelected">
+      <label for="keepOptionSelected">オプションを先頭に戻さない</label>
+    </span>
+    <span id="fundingTrackingControls" style="display: none;">
+      <button onclick="clearFundingFailureTracking()" style="margin-left: 8px;">トラッキング解除</button>
+      <input type="checkbox" id="pinFundingFailureTracking" style="margin-left: 8px;">
+      <label for="pinFundingFailureTracking">トラッキングを固定</label>
+    </span>
 </div>
 <button onclick="nextTurn()">▶ ターンを進める</button>
 <br>
@@ -180,7 +198,7 @@ SOFTWARE. -->
     </div>
 </div>
 <button onclick="confirmAction()" id="confirmBtn" disabled>決定</button>
-<button onclick="clearTileSelection()">タイル選択の解除</button>
+<button onclick="clearTileSelection()" id="clearTileSelectionBtn" style="display: none;">タイル選択の解除</button>
 <span id="tileInfo"></span>
 <div id="gameContainer" style="display: flex; gap: 5px;">
     <table id="map"></table>

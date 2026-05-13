@@ -32,6 +32,19 @@ const KING_MONSTER_CODE = 'KING_MONSTER';
   let trackedFundingFailure = null; // 資金不足で失敗した計画の追跡情報
   let currentExecutingTask = null; // 実行中計画（失敗追跡用）
 
+  const SESSION_SETTING_DEFAULTS = {
+      settingShowClearTileSelection: false,
+      settingShowKeepOptionSelected: true,
+      settingShowFundingTrackingControls: false,
+      settingShowEconomicCrisisRate: false,
+      settingEnablePlanTracking: false,
+      settingEnhanceWarshipToExpLimit: false,
+      settingAutoBombardCountToGuns: false,
+      settingAutoExportFoodMax: false,
+      settingAutoSupplyMax: false
+  };
+  let sessionSettings = { ...SESSION_SETTING_DEFAULTS };
+
   // 軍艦の色変化条件
   const WARSHIP_CAPS = {
       maxDurability: 30,
@@ -325,6 +338,78 @@ function getRequiredMoneyForTask(task) {
     if (action === 'repairWarship') return 100000 * (task.amount || 1);
     return 0;
 }
+function isSessionSettingEnabled(settingId) {
+    return Boolean(sessionSettings[settingId]);
+}
+function setElementDisplayById(elementId, isVisible, displayValue = '') {
+    const element = document.getElementById(elementId);
+    if (element) element.style.display = isVisible ? displayValue : 'none';
+}
+function getSelectedTileWarship() {
+    if (selectedX === null || selectedY === null) return null;
+    return warships.find(ship => ship.x === selectedX && ship.y === selectedY) || null;
+}
+function getMaxExportFoodAmount() {
+    return Math.max(1, Math.floor(food / 20));
+}
+function getMaxRefuelAmount(warship) {
+    if (!warship) return 1;
+    ensureWarshipFields(warship);
+    const capacityLimit = Math.max(0, warship.maxFuel - warship.currentFuel);
+    const resourceLimit = Math.floor(food / 500);
+    return Math.max(1, Math.min(capacityLimit, resourceLimit));
+}
+function getMaxResupplyAmmoAmount(warship) {
+    if (!warship) return 1;
+    ensureWarshipFields(warship);
+    const capacityLimit = Math.max(0, warship.maxAmmo - warship.currentAmmo);
+    const resourceLimit = Math.floor(money / 20000);
+    return Math.max(1, Math.min(capacityLimit, resourceLimit));
+}
+function applyAutomaticInputValues(action) {
+    if (isSessionSettingEnabled('settingAutoExportFoodMax') && action === 'exportFood') {
+        document.getElementById('exportAmount').value = getMaxExportFoodAmount();
+    }
+    if (isSessionSettingEnabled('settingAutoBombardCountToGuns') && (action === 'bombard' || action === 'spreadBombard' || action === 'ppBombard' || action === 'randomBombard')) {
+        document.getElementById('bombardCount').value = Math.max(1, getGunCount());
+    }
+    if (isSessionSettingEnabled('settingAutoSupplyMax')) {
+        const warship = getSelectedTileWarship();
+        if (action === 'refuelWarship') {
+            document.getElementById('refuelAmount').value = getMaxRefuelAmount(warship);
+        } else if (action === 'resupplyWarshipAmmo') {
+            document.getElementById('resupplyAmmoAmount').value = getMaxResupplyAmmoAmount(warship);
+        }
+    }
+}
+function applySessionSettings() {
+    setElementDisplayById('clearTileSelectionBtn', isSessionSettingEnabled('settingShowClearTileSelection'), 'inline-block');
+    setElementDisplayById('keepOptionSettingControl', isSessionSettingEnabled('settingShowKeepOptionSelected'), 'inline');
+    setElementDisplayById('fundingTrackingControls', isSessionSettingEnabled('settingShowFundingTrackingControls'), 'inline');
+    if (!isSessionSettingEnabled('settingEnablePlanTracking')) {
+        trackedFundingFailure = null;
+    }
+    updateLogStatusLines();
+    const actionSelect = document.getElementById('actionSelect');
+    const warshipSubSelect = document.getElementById('warshipSubSelect');
+    let action = actionSelect ? actionSelect.value : '';
+    if (action === 'warshipTool' && warshipSubSelect) action = warshipSubSelect.value;
+    applyAutomaticInputValues(action);
+}
+function initializeSessionSettings() {
+    sessionSettings = { ...SESSION_SETTING_DEFAULTS };
+    Object.keys(SESSION_SETTING_DEFAULTS).forEach(settingId => {
+        const input = document.getElementById(settingId);
+        if (!input) return;
+        input.checked = SESSION_SETTING_DEFAULTS[settingId];
+        input.addEventListener('change', () => {
+            sessionSettings[settingId] = input.checked;
+            applySessionSettings();
+            if (typeof window.updateConfirmButton === 'function') window.updateConfirmButton();
+        });
+    });
+    applySessionSettings();
+}
 function getEconomicCrisisRiskInfo() {
     const currentTotalMoney = money + frozenMoney;
     const threshold = 100000000;
@@ -345,6 +430,8 @@ function updateLogStatusLines() {
     const line1 = document.getElementById('logStatusLine1');
     const line2 = document.getElementById('logStatusLine2');
     if (!line1 || !line2) return;
+    line1.style.display = isSessionSettingEnabled('settingShowEconomicCrisisRate') ? '' : 'none';
+    line2.style.display = isSessionSettingEnabled('settingEnablePlanTracking') ? '' : 'none';
     const crisisInfo = getEconomicCrisisRiskInfo();
     if (crisisInfo.crisisActive) {
         line1.textContent = `経済危機進行中: 発生確率 100% (残り ${economicCrisisTurns}ターン)`;
@@ -373,6 +460,7 @@ function updateLogStatusLines() {
     }
 }
 function setFundingFailureTrackingFromTask(task) {
+    if (!isSessionSettingEnabled('settingEnablePlanTracking')) return;
     if (!task) return;
     const pinTracking = document.getElementById('pinFundingFailureTracking')?.checked;
     if (pinTracking && trackedFundingFailure) return;
@@ -805,6 +893,8 @@ window.updateConfirmButton = function () {
   } else if (action === 'dig') {
     document.getElementById('oilDrillFactor').style.display = 'inline-block';
   }
+  applyAutomaticInputValues(action);
+  applySessionSettings();
   renderMap();
 }
 function renderMap() {
@@ -944,6 +1034,11 @@ info += ` / 軍艦: ${warshipNameDisplay} (母港: ${warshipAtTile.homePort}, EX
 function selectTile(x, y) {
   selectedX = x;
   selectedY = y;
+  const actionSelect = document.getElementById('actionSelect');
+  const warshipSubSelect = document.getElementById('warshipSubSelect');
+  let action = actionSelect ? actionSelect.value : '';
+  if (action === 'warshipTool' && warshipSubSelect) action = warshipSubSelect.value;
+  applyAutomaticInputValues(action);
   renderMap();
 }
 window.clearTileSelection = function() {
@@ -975,7 +1070,7 @@ function logAction(msg, options = {}) {
   } else {
     log.prepend(entry);
   }
-  if (currentExecutingTask && msg.includes('失敗') && msg.includes('資金不足')) {
+  if (currentExecutingTask && isSessionSettingEnabled('settingEnablePlanTracking') && msg.includes('失敗') && msg.includes('資金不足')) {
     setFundingFailureTrackingFromTask(currentExecutingTask);
   }
   updateLogStatusLines();
@@ -1564,6 +1659,7 @@ const keepOptionSelected = document.getElementById('keepOptionSelected').checked
   }
 
   if (!action) return;
+  applyAutomaticInputValues(action);
   const requiresTileSelection = ['buildFarm', 'buildFactory', 'buildPort', 'buildGun', 'buildDefenseFacility', 'buildWarship', 'refuelWarship', 'resupplyWarshipAmmo', 'repairWarship', 'setWarshipNickname', 'convertAchievementToExp', 'remodelWarshipWeapon', 'dispatchWarship', 'requestWarshipReturn', 'flatten', 'landfill', 'dig', 'cutForest', 'plantForest', 'enhanceFacility', 'selfDestructMilitaryFacility', 'bombard', 'spreadBombard', 'ppBombard', 'concentratedFire'];
   if (requiresTileSelection.includes(action) && !targetTileSelected) {
     logAction(`アクションの対象タイルを選択してください`);
@@ -1992,50 +2088,55 @@ logAction(`島の初期化はキャンセルされました。`);
         return;
     }
 
-    ship.exp -= expCost; // 経験値を消費
+    const enhancementResults = [];
+    do {
+        ship.exp -= expCost; // 経験値を消費
 
-    let buffMessage = '';
-    const rand = Math.random() * 100; // 0から99.99...の乱数
+        let buffMessage = '';
+        const rand = Math.random() * 100; // 0から99.99...の乱数
 
-    // バフの確率と効果を定義
-    if (rand < 35) { // 35%
-        ship.maxFuel += 5;
-        ship.fuel = Math.min(ship.fuel, ship.maxFuel); // 上限を超えないように調整
-        buffMessage = `燃料上限+5`;
-    } else if (rand < 70) { // 35% + 35% = 70%
-        ship.maxAmmo += 10;
-        ship.ammo = Math.min(ship.ammo, ship.maxAmmo); // 上限を超えないように調整
-        buffMessage = `弾薬庫上限+10`;
-    } else if (rand < 81) { // 70% + 11% = 81%
-        ship.antiAir += 1;
-        buffMessage = `対空砲+1`;
-    } else if (rand < 91) { // 81% + 10% = 91%
-        ship.maxFuel += 10;
-        ship.fuel = Math.min(ship.fuel, ship.maxFuel); // 上限を超えないように調整
-        buffMessage = `燃料上限+10`;
-    } else if (rand < 95) { // 91% + 4% = 95%
-        ship.maxDurability += 1;
-        ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability); // 上限を超えないように調整
-        buffMessage = `耐久上限+1`;
-    } else if (rand < 99) { // 95% + 4% = 99%
-        ship.mainGun += 1;
-        buffMessage = `主砲+1`;
-    } else if (rand < 99.5) { // 99% + 0.5% = 99.5%
-        ship.maxAmmo += 100;
-        ship.ammo = Math.min(ship.ammo, ship.maxAmmo); // 上限を超えないように調整
-        buffMessage = `弾薬庫上限+100`;
-    } else if (rand < 99.8) { // 99.5% + 0.3% = 99.8%
-        ship.antiAir += 2;
-        ship.maxDurability += 1;
-        ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability);
-        buffMessage = `対空+2＆耐久上限+1`;
-    } else { // 99.8% + 0.2% = 100%
-        ship.maxDurability += 3;
-        ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability);
-        ship.mainGun += 2;
-        buffMessage = `耐久上限+3＆主砲+2`;
-    }
-    logAction(`${ship.name} を増強しました！ ${buffMessage}を獲得。現在の経験値: ${ship.exp}`);
+        // バフの確率と効果を定義
+        if (rand < 35) { // 35%
+            ship.maxFuel += 5;
+            ship.currentFuel = Math.min(ship.currentFuel, ship.maxFuel); // 上限を超えないように調整
+            buffMessage = `燃料上限+5`;
+        } else if (rand < 70) { // 35% + 35% = 70%
+            ship.maxAmmo += 10;
+            ship.currentAmmo = Math.min(ship.currentAmmo, ship.maxAmmo); // 上限を超えないように調整
+            buffMessage = `弾薬庫上限+10`;
+        } else if (rand < 81) { // 70% + 11% = 81%
+            ship.antiAir += 1;
+            buffMessage = `対空砲+1`;
+        } else if (rand < 91) { // 81% + 10% = 91%
+            ship.maxFuel += 10;
+            ship.currentFuel = Math.min(ship.currentFuel, ship.maxFuel); // 上限を超えないように調整
+            buffMessage = `燃料上限+10`;
+        } else if (rand < 95) { // 91% + 4% = 95%
+            ship.maxDurability += 1;
+            ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability); // 上限を超えないように調整
+            buffMessage = `耐久上限+1`;
+        } else if (rand < 99) { // 95% + 4% = 99%
+            ship.mainGun += 1;
+            buffMessage = `主砲+1`;
+        } else if (rand < 99.5) { // 99% + 0.5% = 99.5%
+            ship.maxAmmo += 100;
+            ship.currentAmmo = Math.min(ship.currentAmmo, ship.maxAmmo); // 上限を超えないように調整
+            buffMessage = `弾薬庫上限+100`;
+        } else if (rand < 99.8) { // 99.5% + 0.3% = 99.8%
+            ship.antiAir += 2;
+            ship.maxDurability += 1;
+            ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability);
+            buffMessage = `対空+2＆耐久上限+1`;
+        } else { // 99.8% + 0.2% = 100%
+            ship.maxDurability += 3;
+            ship.currentDurability = Math.min(ship.currentDurability, ship.maxDurability);
+            ship.mainGun += 2;
+            buffMessage = `耐久上限+3＆主砲+2`;
+        }
+        enhancementResults.push(buffMessage);
+    } while (isSessionSettingEnabled('settingEnhanceWarshipToExpLimit') && ship.exp >= expCost);
+    const resultSummary = enhancementResults.length === 1 ? enhancementResults[0] : `${enhancementResults.length}回実行（${enhancementResults.join('、')}）`;
+    logAction(`${ship.name} を増強しました！ ${resultSummary}を獲得。現在の経験値: ${ship.exp}`);
     renderMap();
     updateStatus();
     saveMyIslandState();
@@ -4105,6 +4206,7 @@ window.loadGame = function() {
 }
 // 初期化時に自分の島の状態をロード（または初期化）する　
 window.onload = function() {
+    initializeSessionSettings();
     loadMyIslandState(); // まず自分の島をロード/初期化
     updateConfirmButton(); // 初回UI更新
 };
