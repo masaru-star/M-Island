@@ -115,7 +115,9 @@ td {
   padding: 20px;
   border-radius: 8px;
   width: 80%;
-  max-width: 400px;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
@@ -151,4 +153,18 @@ noscript {
   font-size: 1.1rem;
   line-height: 1.6;
   max-width: 600px;
+}
+
+.settings-note {
+  font-size: 0.85em;
+  color: #666;
+}
+.settings-list {
+  text-align: left;
+  margin: 0 auto 1em;
+  max-width: 620px;
+}
+.settings-list label {
+  display: block;
+  margin: 0.45em 0;
 }
